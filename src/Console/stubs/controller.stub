@@ -1,0 +1,8 @@
+import { Controller, Request, Response } from 'bushjs';
+
+export class {{class}} extends Controller {
+  async index(request: Request, response: Response) {
+    // TODO: Implement your logic here
+    response.send('Welcome');
+  }
+}

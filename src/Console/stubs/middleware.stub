@@ -1,0 +1,9 @@
+import { Middleware } from '@framework/Http/Middleware/Middleware';
+import { Request, Response } from '@framework';
+
+export class {{class}} extends Middleware {
+  async handle(request: Request, response: Response, next: () => Promise<void>): Promise<void> {
+    // TODO: Add middleware logic here
+    await next();
+  }
+}

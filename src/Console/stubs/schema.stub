@@ -1,0 +1,15 @@
+import { BaseSchema } from 'bushjs';
+
+export default class {{class}} extends BaseSchema {
+  async up(): Promise<void> {
+    await this.createCollection('{{table}}', (schema) => {
+      schema.id();
+      schema.string('name', 255, true);
+      schema.timestamps();
+    });
+  }
+
+  async down(): Promise<void> {
+    await this.dropCollection('{{table}}');
+  }
+}

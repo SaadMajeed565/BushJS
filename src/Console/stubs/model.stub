@@ -1,0 +1,9 @@
+import { Model } from 'bushjs';
+
+export class {{class}} extends Model {
+  static collection = '{{table}}';
+  static fields = ['{{class}}', {
+    // Define your fields here
+    // name: { type: 'string', required: true },
+  }];
+}

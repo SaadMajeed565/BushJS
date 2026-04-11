@@ -1,0 +1,28 @@
+import { Policy } from '@framework/Auth/Gate';
+
+export class {{class}} implements Policy {
+  async viewAny(user: any): Promise<boolean> {
+    // TODO: Add logic for viewing all records
+    return true;
+  }
+
+  async view(user: any, model: any): Promise<boolean> {
+    // TODO: Add logic for viewing a single record
+    return true;
+  }
+
+  async create(user: any): Promise<boolean> {
+    // TODO: Add logic for creating a record
+    return true;
+  }
+
+  async update(user: any, model: any): Promise<boolean> {
+    // TODO: Add logic for updating a record
+    return true;
+  }
+
+  async delete(user: any, model: any): Promise<boolean> {
+    // TODO: Add logic for deleting a record
+    return true;
+  }
+}

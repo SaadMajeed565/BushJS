@@ -1,0 +1,1 @@
+{"version":3,"file":"Middleware.d.ts","sourceRoot":"","sources":["../../../src/Http/Middleware/Middleware.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AACrC,OAAO,EAAE,QAAQ,EAAE,MAAM,aAAa,CAAC;AAEvC,8BAAsB,UAAU;IAC9B,QAAQ,CAAC,MAAM,CAAC,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,QAAQ,EAAE,IAAI,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,GAAG,OAAO,CAAC,IAAI,CAAC;CAChG"}

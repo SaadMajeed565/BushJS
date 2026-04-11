@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "baseUrl": "src",
+    "types": ["node"],
+    "outDir": "./core",
+    "resolveJsonModule": true,
+    "moduleResolution": "Node",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "paths": {
+      "@framework": ["bush.ts"],
+      "@framework/*": ["*"]
+    }
+  },
+  "include": ["src/**/*", "src/**/*.d.ts"]
+}

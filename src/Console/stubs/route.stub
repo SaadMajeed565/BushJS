@@ -1,0 +1,5 @@
+import { Application } from 'bushjs';
+
+export function registerRoutes(app: Application) {
+  // TODO: Register your routes here
+}

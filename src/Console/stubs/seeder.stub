@@ -1,0 +1,5 @@
+export default class {{class}} {
+  async run(): Promise<void> {
+    // TODO: Write your seed logic here
+  }
+}
