@@ -84,9 +84,10 @@ export class MonitoringService {
 
   // System metrics collection
   private startSystemMetricsCollection(): void {
-    setInterval(() => {
+    const handle = setInterval(() => {
       this.collectSystemMetrics();
     }, 30000); // Every 30 seconds
+    handle.unref();
   }
 
   private collectSystemMetrics(): void {

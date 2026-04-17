@@ -1,60 +1,62 @@
 # Installation
 
-Bush.js is delivered as two packages:
+Install Bush.js and run your first application.
 
-- `bushjs` — the runtime package with the framework core
-- `@bushjs/cli` — the CLI package for scaffolding and generators
+## Requirements
 
-## Install the framework package
+- Node.js 18+
+- npm 9+ (or yarn/pnpm)
+- MongoDB (local, Docker, or hosted)
 
-In a generated application, the runtime package should be installed as a dependency.
+## Create a new app
 
-For local development, install from the package folder:
+```bash
+npx bushjs-cli new my-app
+cd my-app
+npm install
+cp .env.example .env
+npm run migrate
+npm run dev
+```
+
+## Local Development Against Unpublished Repositories
+
+Install runtime package from local path:
 
 ```bash
 npm install /path/to/bush-js-framework
 ```
 
-When published, install it like this:
-
-```bash
-npm install bushjs
-```
-
-## Install the CLI package
-
-The CLI is intended for development and scaffolding.
-
-Install it globally if you want to run `bush` from any directory:
-
-```bash
-npm install -g /path/to/bush-js-cli
-```
-
-When published, install it like this:
-
-```bash
-npm install -g @bushjs/cli
-```
-
-If you prefer not to install globally, use `npx`:
+Run CLI from local source:
 
 ```bash
 npx /path/to/bush-js-cli/core/src/cli.js new my-app
 ```
 
-## Recommended workflow
+## Global Command Install (Optional)
 
-- Use `bushjs` as a runtime dependency in your app.
-- Use `@bushjs/cli` for project creation and code generation.
-- Avoid shipping the CLI package with production apps.
-
-## Verifying the install
-
-To validate the CLI, run:
+Use this if you want `bush` available from anywhere:
 
 ```bash
+npm install -g bushjs-cli
 bush --help
 ```
 
-To validate the framework package in a generated app, start the app and confirm it boots successfully.
+`bush` provides the `new` project setup command. File generators run through the framework console commands in your project.
+
+## Verify Install
+
+Check:
+
+1. `npm run dev` starts cleanly
+2. `http://localhost:3000/health` returns a successful response
+3. `npm run migrate` completes without database errors
+
+## Production Notes
+
+- Keep command tooling as a dev tool; do not rely on it at runtime
+- Configure secrets through environment variables
+- Use a managed MongoDB or secured self-hosted instance
+
+---
+**Previous:** [Introduction](introduction.md) | **Next:** [Getting Started](getting-started.md)

@@ -1,31 +1,55 @@
-# Bush.js Framework Documentation
+# Bush.js
 
-This documentation is written for developers who want to use Bush.js to build real apps.
+Bush.js is a Node.js framework built on top of Express.js and MongoDB (with TypeScript). It gives you routing, middleware, validation, authentication, and a clear place for your application code. You can also add GraphQL or WebSockets when your project needs them.
 
-## Docs overview
+## Quick start
+
+```bash
+npm install -g bushjs-cli
+bush new my-app
+cd my-app
+npm install
+cp .env.example .env
+npm run migrate
+npm run dev
+```
+
+With MongoDB running, open `http://localhost:3000/health` to confirm the app is up.
+
+---
+
+## Documentation
+
+### Getting started
 
 - [Introduction](introduction.md)
-- [Getting Started](getting-started.md)
 - [Installation](installation.md)
-- [Project Structure](project-structure.md)
-- [App Directory](app-directory.md)
-- [CLI Reference](cli.md)
-- [Generators](generators.md)
+- [Getting started](getting-started.md)
+
+### Basics
+
+- [Basics](basics.md)
+- [Basics overview](basics-overview.md)
+- [Project structure](project-structure.md)
+- [App directory](app-directory.md)
 - [Configuration](configuration.md)
+- [Routing](routing.md)
+- [Controllers](controllers.md)
+- [Middleware](middleware.md)
+- [Validation](validation.md)
+- [Authentication](authentication.md)
+- [Authorization](authorization.md)
+- [Database](database.md)
+- [GraphQL](graphql.md)
+- [Realtime & WebSockets](realtime-websockets.md)
+- [Command reference](cli.md)
+- [Generators](generators.md)
 
-## How to use this guide
+### Advanced
 
-1. Read **Introduction** to understand what Bush.js helps you build.
-2. Follow **Getting Started** to scaffold, install, and run your app.
-3. Use **Project Structure** to know where to add new features.
-4. Use **App Directory** to learn how to write controllers, middleware, requests, and models.
-5. Use **CLI Reference** and **Generators** to speed up development.
-6. Use **Configuration** to customize your app for local and production use.
+- [Advanced](advanced.md)
+- [Advanced custom architecture](advanced-custom-architecture.md)
 
-## What this guide teaches
+---
 
-- how to create a new Bush.js project
-- how to add routes and controllers
-- how to use request validation and policies
-- how to generate files with the CLI
-- how to configure environment settings
+**Continue with the full documentation:** [Introduction](introduction.md)

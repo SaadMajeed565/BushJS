@@ -1,99 +1,53 @@
 # Configuration
 
-This page teaches you how to configure a Bush.js application for local development and production.
+Bush.js reads configuration via `config` and environment variables.
 
-## `.env`
+## Environment variables
 
-Copy the provided `.env.example` to `.env` and update values.
-
-Example:
+Create `.env` and define core values:
 
 ```env
-APP_NAME=MyBushApp
 NODE_ENV=development
+APP_NAME=Bush App
 APP_URL=http://localhost:3000
-DB_HOST=localhost
+
+DB_CONNECTION=mongodb
+DB_HOST=127.0.0.1
 DB_PORT=27017
-DB_DATABASE=my_bush_app
-AUTH_JWT_SECRET=replace_this_secret
-AUTH_SESSION_SECRET=another_secret
+DB_DATABASE=bush_app
+
+AUTH_GUARD=api
+AUTH_JWT_SECRET=change-me
+AUTH_SESSION_SECRET=change-me-too
 ```
 
-## `config/`
-
-Use the `config/` folder for application settings.
-
-Common config files:
-
-- `config/app.ts` — app name, URL, environment, debug
-- `config/database.ts` — database connection settings
-- `config/auth.ts` — auth and session settings
-
-## How to change the port or URL
-
-Update `config/app.ts` or the `.env` variables.
-
-Then restart the application.
-
-## Access config from code
-
-Use the config helper in controllers and services:
+## Accessing config
 
 ```ts
-import { config } from '@framework';
+import { config } from 'bushjs';
 
-const appUrl = config.app.url;
-const debugMode = config.app.debug;
+const appName = config.app.name;
+const isProd = config.app.env === 'production';
+const jwtSecret = config.auth.jwt_secret;
 ```
 
-## Using config values in controllers
+## Important auth settings
 
-Example:
+- `AUTH_GUARD` default guard (`api` or `web`)
+- `AUTH_JWT_SECRET` JWT signing/verifying secret
+- `AUTH_SESSION_SECRET` express-session secret
 
-```ts
-import { config } from '@framework';
+## CORS and rate limit
 
-export class ExampleController {
-  async index(request, response) {
-    return response.json({ baseUrl: config.app.url });
-  }
-}
-```
+Bush.js HTTP kernel applies security defaults (Helmet, CORS, global rate limiting). Customize values through your config/environment and restart the server.
 
-## Database settings
-
-Update database values in `.env` and `config/database.ts`.
-
-Example:
-
-```env
-DB_HOST=localhost
-DB_PORT=27017
-DB_DATABASE=my_bush_app
-```
-
-## Authentication settings
-
-Set your auth secrets in `.env`:
-
-```env
-AUTH_JWT_SECRET=replace_this_secret
-AUTH_SESSION_SECRET=another_secret
-```
-
-## Environment-specific configuration
-
-Bush.js can load `.env.development`, `.env.production`, or other environment files based on `NODE_ENV`.
-
-Set `NODE_ENV` to switch environments:
+## Environment switching
 
 ```bash
 NODE_ENV=production npm run start
 ```
 
-## Recommended workflow
+Keep production secrets outside source control and injected by deployment environment.
 
-- keep secrets in `.env`
-- do not commit `.env` to source control
-- use `config/` for settings that should be part of the app repository
-- use `.env` for sensitive and machine-specific values
+---
+**Previous:** [App Directory](app-directory.md) | **Next:** [Routing](routing.md)

@@ -1,3 +1,5 @@
+import { ForbiddenException } from '../Exceptions/HttpExceptions';
+
 export interface Policy {
   viewAny?(user: any): boolean | Promise<boolean>;
   view?(user: any, model: any): boolean | Promise<boolean>;
@@ -13,31 +15,32 @@ export class Gate {
     this.policies.set(model, policy);
   }
 
-  allows(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean> {
+  async allows(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean> {
     const policy = this.policies.get(model?.constructor?.name || model);
     if (!policy) {
-      return Promise.resolve(false);
+      return false;
     }
 
     const method = policy[ability as keyof Policy];
     if (typeof method === 'function') {
       if (ability === 'viewAny' || ability === 'create') {
-        return Promise.resolve((method as any).call(policy, user));
-      } else {
-        return Promise.resolve((method as any).call(policy, user, model));
+        const r = await (method as any).call(policy, user);
+        return !!r;
       }
+      const r = await (method as any).call(policy, user, model);
+      return !!r;
     }
 
-    return Promise.resolve(false);
+    return false;
   }
 
-  denies(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean> {
-    return this.allows(user, ability, model, ...args).then(allowed => !allowed);
+  async denies(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean> {
+    return !(await this.allows(user, ability, model, ...args));
   }
 
-  authorize(user: any, ability: string, model?: any, ...args: any[]): void {
-    if (!this.allows(user, ability, model, ...args)) {
-      throw new Error('Unauthorized');
+  async authorize(user: any, ability: string, model?: any, ...args: any[]): Promise<void> {
+    if (!(await this.allows(user, ability, model, ...args))) {
+      throw new ForbiddenException('This action is unauthorized.');
     }
   }
 }

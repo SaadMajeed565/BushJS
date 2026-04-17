@@ -212,11 +212,62 @@ export class TokenGuard implements Guard, ProviderAware {
   }
 
   private getTokenFromRequest(request: Request): string | null {
-    const authHeader = request.headers.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
+    const rawAuth = request.headers.authorization;
+    const authHeader =
+      typeof rawAuth === 'string'
+        ? rawAuth
+        : Array.isArray(rawAuth)
+          ? rawAuth.find((h): h is string => typeof h === 'string' && h.startsWith('Bearer '))
+          : undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      const t = authHeader.slice(7).trim();
+      return t.length > 0 ? t : null;
+    }
+    const q = request.query?.token;
+    if (q && typeof q === 'string' && q.trim().length > 0) {
+      const t = q.trim();
+      return t.startsWith('Bearer ') ? t.slice(7).trim() : t;
     }
     return null;
+  }
+
+  /**
+   * Verify a JWT string and load the user via the registered provider (same rules as the API guard).
+   * Use for WebSocket in-band auth or any non-HTTP bearer context.
+   */
+  async userFromTokenString(rawToken: string | null | undefined): Promise<AuthUser | null> {
+    if (!rawToken?.trim()) {
+      return null;
+    }
+    const token = rawToken.trim().startsWith('Bearer ') ? rawToken.trim().slice(7).trim() : rawToken.trim();
+    if (!token) {
+      return null;
+    }
+
+    if (!this.provider) {
+      throw new Error('User provider is not registered.');
+    }
+
+    let userId: string;
+    try {
+      const payload = jwt.verify(token, this.secret) as { sub?: string };
+      if (!payload?.sub) {
+        return null;
+      }
+      userId = String(payload.sub);
+    } catch {
+      return null;
+    }
+
+    const userRecord = await this.provider.findById(userId);
+    if (!userRecord) {
+      return null;
+    }
+
+    return {
+      ...userRecord,
+      id: userRecord._id?.toString?.() ?? userRecord.id,
+    };
   }
 }
 
@@ -252,6 +303,18 @@ export class Auth {
 
   user(request: Request, name = 'web'): Promise<AuthUser | null> {
     return this.guard(name).user(request);
+  }
+
+  /**
+   * Resolve a user from a raw JWT (e.g. WebSocket JSON `{ type: "auth", token }`).
+   * Only supported for the **`api`** (token) guard; other guards return null.
+   */
+  async userFromToken(token: string | null | undefined, guardName = 'api'): Promise<AuthUser | null> {
+    const guard = this.guard(guardName);
+    if (guard instanceof TokenGuard) {
+      return guard.userFromTokenString(token);
+    }
+    return null;
   }
 
   id(request: Request, name = 'web'): string | null {

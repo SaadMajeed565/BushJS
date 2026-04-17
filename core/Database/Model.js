@@ -99,6 +99,10 @@ class Model {
             case 'date':
                 mongooseDef.type = Date;
                 break;
+            case 'objectid':
+            case 'objectId':
+                mongooseDef.type = mongoose_1.Schema.Types.ObjectId;
+                break;
             default:
                 mongooseDef.type = String;
         }

@@ -10,7 +10,7 @@ export declare class Gate {
     define(model: string, policy: Policy): void;
     allows(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean>;
     denies(user: any, ability: string, model?: any, ...args: any[]): Promise<boolean>;
-    authorize(user: any, ability: string, model?: any, ...args: any[]): void;
+    authorize(user: any, ability: string, model?: any, ...args: any[]): Promise<void>;
 }
 export declare const gate: Gate;
 //# sourceMappingURL=Gate.d.ts.map

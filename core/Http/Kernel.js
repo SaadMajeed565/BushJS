@@ -15,8 +15,17 @@ const Request_1 = require("./Request");
 const Response_1 = require("./Response");
 const ExceptionHandler_1 = require("../Exceptions/ExceptionHandler");
 const HttpExceptions_1 = require("../Exceptions/HttpExceptions");
+const Auth_1 = require("../Auth/Auth");
 const Config_1 = require("../Config/Config");
 const Storage_1 = require("../Storage/Storage");
+/** Copy auth fields from the Bush request onto Express so a later `Request.fromExpress` sees them. */
+function syncAuthStateToExpress(expressReq, bush) {
+    expressReq.user = bush.user;
+    expressReq.userId = bush.userId;
+    if (bush.token !== undefined) {
+        expressReq.token = bush.token;
+    }
+}
 class HttpKernel {
     constructor(app) {
         this.middleware = [];
@@ -156,7 +165,10 @@ class HttpKernel {
                     return async (req, res, next) => {
                         const request = await Request_1.Request.fromExpress(req);
                         const response = new Response_1.Response(res);
-                        await mw.handle(request, response, next);
+                        await mw.handle(request, response, async () => {
+                            syncAuthStateToExpress(req, request);
+                            await next();
+                        });
                     };
                 }
                 else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
@@ -165,7 +177,10 @@ class HttpKernel {
                         const request = await Request_1.Request.fromExpress(req);
                         const response = new Response_1.Response(res);
                         const instance = new mw();
-                        await instance.handle(request, response, next);
+                        await instance.handle(request, response, async () => {
+                            syncAuthStateToExpress(req, request);
+                            await next();
+                        });
                     };
                 }
                 return mw; // Function middleware
@@ -181,7 +196,10 @@ class HttpKernel {
                 this.expressApp.use(async (req, res, next) => {
                     const request = await Request_1.Request.fromExpress(req);
                     const response = new Response_1.Response(res);
-                    await mw.handle(request, response, next);
+                    await mw.handle(request, response, async () => {
+                        syncAuthStateToExpress(req, request);
+                        await next();
+                    });
                 });
             }
             else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
@@ -189,7 +207,10 @@ class HttpKernel {
                     const request = await Request_1.Request.fromExpress(req);
                     const response = new Response_1.Response(res);
                     const instance = new mw();
-                    await instance.handle(request, response, next);
+                    await instance.handle(request, response, async () => {
+                        syncAuthStateToExpress(req, request);
+                        await next();
+                    });
                 });
             }
             else {
@@ -204,7 +225,10 @@ class HttpKernel {
                     return async (req, res, next) => {
                         const request = await Request_1.Request.fromExpress(req);
                         const response = new Response_1.Response(res);
-                        await mw.handle(request, response, next);
+                        await mw.handle(request, response, async () => {
+                            syncAuthStateToExpress(req, request);
+                            await next();
+                        });
                     };
                 }
                 else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
@@ -212,15 +236,30 @@ class HttpKernel {
                         const request = await Request_1.Request.fromExpress(req);
                         const response = new Response_1.Response(res);
                         const instance = new mw();
-                        await instance.handle(request, response, next);
+                        await instance.handle(request, response, async () => {
+                            syncAuthStateToExpress(req, request);
+                            await next();
+                        });
                     };
                 }
                 return mw;
             });
-            this.expressApp.use(route.path, ...middleware, (0, express_graphql_1.graphqlHTTP)({
-                schema: route.schema,
-                rootValue: route.rootValue,
-                graphiql: process.env.NODE_ENV !== 'production',
+            this.expressApp.use(route.path, ...middleware, (0, express_graphql_1.graphqlHTTP)(async (req, res) => {
+                const bushRequest = await Request_1.Request.fromExpress(req);
+                await Auth_1.auth.user(bushRequest, 'api');
+                let context = { request: bushRequest };
+                if (route.buildContext) {
+                    const extra = await route.buildContext(bushRequest);
+                    if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+                        context = { ...context, ...extra };
+                    }
+                }
+                return {
+                    schema: route.schema,
+                    rootValue: route.rootValue,
+                    context,
+                    graphiql: process.env.NODE_ENV !== 'production',
+                };
             }));
         });
     }

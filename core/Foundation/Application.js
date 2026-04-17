@@ -66,8 +66,8 @@ class Application {
         this.router.group(options, callback);
         return this;
     }
-    graphql(path, schema, rootValue = {}, middleware = []) {
-        this.graphqlRoutes.push({ path, schema, rootValue, middleware });
+    graphql(path, schema, rootValue = {}, middleware = [], buildContext) {
+        this.graphqlRoutes.push({ path, schema, rootValue, middleware, buildContext });
         return this;
     }
     socket(path, handler, middleware = []) {

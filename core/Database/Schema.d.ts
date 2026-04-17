@@ -21,6 +21,7 @@ export declare class SchemaBuilder {
     indexes: IndexDefinition[];
     constructor(collectionName: string);
     id(fieldName?: string): this;
+    objectId(fieldName: string, required?: boolean): this;
     string(fieldName: string, length?: number, required?: boolean): this;
     unique(): this;
     text(fieldName: string, required?: boolean): this;

@@ -108,6 +108,10 @@ export abstract class Model {
       case 'date':
         mongooseDef.type = Date;
         break;
+      case 'objectid':
+      case 'objectId':
+        mongooseDef.type = Schema.Types.ObjectId;
+        break;
       default:
         mongooseDef.type = String;
     }

@@ -79,6 +79,14 @@ class SchemaBuilder {
         });
         return this;
     }
+    objectId(fieldName, required = false) {
+        this.fields.push({
+            name: fieldName,
+            type: 'objectId',
+            required,
+        });
+        return this;
+    }
     string(fieldName, length = 255, required = false) {
         this.fields.push({
             name: fieldName,

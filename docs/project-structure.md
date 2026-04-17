@@ -1,101 +1,70 @@
 # Project Structure
 
-This page shows developers where to put new code in a Bush.js app.
-
-## Generated application structure
+## Standard Structure
 
 ```text
 my-app/
   app/
+    GraphQL/
+      Resolvers/
     Http/
       Controllers/
       Middleware/
       Requests/
     Models/
     Policies/
+    WebSockets/
   config/
+  database/
+    schemas/
   routes/
+    api.ts
+    graphql.ts
+    websocket.ts
+    index.ts
+  scripts/
+    migrate.ts
   src/
+    app.ts
+  storage/
   package.json
   tsconfig.json
-  .env.example
+  .env
 ```
 
-## What you will edit
+## Directory Responsibilities
 
-### `app/Http/Controllers/`
-Add controllers for your app features.
-
-Example:
-
-- `UserController` for user endpoints
-- `PostController` for blog posts
-
-### `app/Http/Middleware/`
-Add middleware for request handling before controllers.
-
-Use it for:
-
-- authentication
-- logging
-- request validation
-- rate limiting
-
-### `app/Http/Requests/`
-Add request classes for validation and authorization.
-
-Use request classes to keep controllers clean.
-
-### `app/Models/`
-Put your data access logic here.
-
-Use models to:
-
-- query data
-- save records
-- prepare output
-
-### `app/Policies/`
-Add authorization rules here.
-
-Use policies when you need to protect actions like update or delete.
-
-### `config/`
-Put application settings here.
-
-Use `config/` for values such as:
-
-- app name
-- database connection
-- auth secrets
-- CORS or feature flags
+### `app/`
+- Main application/domain code
+- HTTP logic (`Controllers`, `Middleware`, `Requests`)
+- Data models and policies
+- GraphQL resolvers and websocket handlers
 
 ### `routes/`
-Put your route definitions here.
+- Route registration split by transport
+- `index.ts` as central route composer
 
-A route file maps URLs to controller actions.
+### `config/`
+- Environment-driven app settings
+- Runtime behavior tuning
+
+### `database/`
+- Schema files and database lifecycle assets
+
+### `scripts/`
+- Script entrypoints for operational tasks
 
 ### `src/`
-This folder boots the application.
+- Application bootstrap and composition
 
-You usually only edit it to:
+### `storage/`
+- Runtime files (uploads, logs, cache, backups)
 
-- load routes
-- register middleware
-- start the server
+## Rule of Thumb
 
-### `package.json`
-Use this for app dependencies and scripts.
+- Put business logic in `app/`
+- Put wiring/composition in `src/` and `routes/`
+- Put environment settings in `config/`
 
-### `tsconfig.json`
-This file controls TypeScript compilation.
-
-## Developer workflow
-
-1. define a route in `routes/`
-2. generate or create a controller in `app/Http/Controllers/`
-3. validate input with a request in `app/Http/Requests/`
-4. access data in `app/Models/`
-5. protect actions with `app/Policies/`
-
-This layout helps you build features fast and keep code organized.
+---
+**Previous:** [Basics Overview](basics-overview.md) | **Next:** [App Directory](app-directory.md)

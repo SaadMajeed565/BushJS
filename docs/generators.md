@@ -1,114 +1,91 @@
 # Generators
 
-Generators are the developer tools for quickly creating new app files.
+In Bush.js apps, generators are run via the **framework console**, not via `bush` directly.
 
-## Controller generator
-
-Create a new controller:
+Use:
 
 ```bash
-bush make:controller ArticleController
+npm run bush:console -- <command>
 ```
 
-Where it appears:
+## Common generator commands
 
-- `app/Http/Controllers/ArticleController.ts`
-
-What to do next:
-
-- add route definitions in `routes/`
-- implement action methods for the controller
-
-## Middleware generator
-
-Create middleware:
+### Model
 
 ```bash
-bush make:middleware Authenticate
+npm run bush:console -- make:model Product
 ```
 
-Where it appears:
+Creates a model under `app/Models/`.
 
-- `app/Http/Middleware/Authenticate.ts`
-
-What to do next:
-
-- attach it to routes in `routes/`
-- use it to protect endpoints or modify requests
-
-## Request generator
-
-Create a request validation class:
+### Controller
 
 ```bash
-bush make:request StoreArticleRequest
+npm run bush:console -- make:controller ProductController
 ```
 
-Where it appears:
+Creates `app/Http/Controllers/ProductController.ts`.
 
-- `app/Http/Requests/StoreArticleRequest.ts`
-
-What to do next:
-
-- add your validation rules
-- use the request in controller methods
-
-## Policy generator
-
-Create a policy:
+### Middleware
 
 ```bash
-bush make:policy ArticlePolicy
+npm run bush:console -- make:middleware EnsureAdmin
 ```
 
-Where it appears:
+Creates `app/Http/Middleware/EnsureAdmin.ts`.
 
-- `app/Policies/ArticlePolicy.ts`
-
-What to do next:
-
-- check permissions in your controllers
-- call policy methods before updating or deleting resources
-
-## Command generator
-
-Create a console command:
+### Request
 
 ```bash
-bush make:command CleanCacheCommand
+npm run bush:console -- make:request StoreProductRequest
 ```
 
-Where it appears:
+Creates `app/Http/Requests/StoreProductRequest.ts`.
 
-- `src/Console/Commands/CleanCacheCommand.ts`
-
-What to do next:
-
-- wire the command into the console kernel
-- run it from the terminal
-
-## Route generator
-
-Create a route file:
+### Policy
 
 ```bash
-bush make:route api
+npm run bush:console -- make:policy ProductPolicy
 ```
 
-Where it appears:
+Creates `app/Policies/ProductPolicy.ts`.
 
-- `routes/api.ts`
+### Schema / migration-style file
 
-What to do next:
+```bash
+npm run bush:console -- make:schema create_products
+```
 
-- import controllers
-- register paths with `router.get`, `router.post`, etc.
+Creates a schema file under `database/schemas/`.
 
-## Use generators as a workflow
+### Seeder
 
-1. generate a controller
-2. generate a request for validation
-3. add the route
-4. implement the controller action
+```bash
+npm run bush:console -- make:seeder ProductSeeder
+```
 
-This keeps your app consistent and reduces errors.
+Creates a seeder file under `database/seeders/` (if configured by your app setup).
+
+## Run generated data workflows
+
+```bash
+npm run bush:console -- schema
+npm run bush:console -- seed
+```
+
+## Practical workflow
+
+1. `make:model Product`
+2. `make:controller ProductController`
+3. `make:request StoreProductRequest`
+4. add route in `routes/api.ts`
+5. protect with middleware/policy
+
+## Generator Best Practices
+
+- Generate first, then tailor each file to your domain
+- Keep generated names resource-driven (`User`, `Order`, `Invoice`)
+- Pair controller generation with request and policy generation
+
+---
+**Previous:** [Command Reference](cli.md) | **Next:** [Advanced Overview](advanced.md)

@@ -15,6 +15,13 @@ class AuthMiddleware extends Middleware_1.Middleware {
             });
             return;
         }
+        const user = await Auth_1.auth.user(request, this.guard);
+        if (!user) {
+            response.status(401).json({
+                message: 'Unauthenticated.',
+            });
+            return;
+        }
         await next();
     }
 }

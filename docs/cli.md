@@ -1,99 +1,71 @@
-# CLI Reference
+# Command Reference
 
-The `bush` CLI is the fastest way to create a new project and generate app files.
+This page lists project commands used in Basics and Advanced workflows.
 
-## Run the CLI
+## Project setup command
 
-If installed globally:
+### Available setup command
+
+```bash
+bush new <project-name>
+```
+
+This creates a new project directory and updates `package.json` name.
+
+### Help output
 
 ```bash
 bush --help
 ```
 
-If not installed globally, use `npx`:
+Shows:
+
+- `new <project-name>` create a new Bush.js application
+
+## Framework console commands
+
+Inside a project, use:
 
 ```bash
-npx /path/to/bush-js-cli/core/src/cli.js --help
+npm run bush:console -- <command>
 ```
 
-When published, use:
+Examples:
 
 ```bash
-npx @bushjs/cli --help
+npm run bush:console -- make:model Product
+npm run bush:console -- make:controller OrderController
+npm run bush:console -- make:middleware EnsureAdmin
+npm run bush:console -- make:request StoreOrderRequest
+npm run bush:console -- make:policy OrderPolicy
+npm run bush:console -- make:schema create_orders
+npm run bush:console -- make:seeder OrderSeeder
+npm run bush:console -- schema
+npm run bush:console -- seed
 ```
 
-## Create a new app
+You can also run:
 
 ```bash
-bush new my-app
+npx bushjs-console
 ```
 
-This command creates a new project with starter files and a working `package.json`.
+## Command Families
 
-## Generate a controller
+- **Scaffolding**: create project or files
+- **Database lifecycle**: schema and seed execution
+- **Operational scripts**: migrate/build/start/test
+
+## Typical bootstrap flow
 
 ```bash
-bush make:controller UserController
+npx bushjs-cli new my-app
+cd my-app
+npm install
+cp .env.example .env
+npm run migrate
+npm run dev
 ```
 
-Result:
-
-- creates `app/Http/Controllers/UserController.ts`
-- adds a skeleton controller class
-
-## Generate middleware
-
-```bash
-bush make:middleware Authenticate
-```
-
-Result:
-
-- creates `app/Http/Middleware/Authenticate.ts`
-- provides a `handle()` method to run before requests
-
-## Generate a request
-
-```bash
-bush make:request StoreUserRequest
-```
-
-Result:
-
-- creates `app/Http/Requests/StoreUserRequest.ts`
-- provides `authorize()` and `rules()` methods for validation
-
-## Generate a policy
-
-```bash
-bush make:policy UserPolicy
-```
-
-Result:
-
-- creates `app/Policies/UserPolicy.ts`
-- provides permission methods like `view()`, `update()`, and `delete()`
-
-## Generate a command
-
-```bash
-bush make:command CleanCacheCommand
-```
-
-Result:
-
-- creates `src/Console/Commands/CleanCacheCommand.ts`
-- provides a `handle()` method for command logic
-
-## Example workflow
-
-1. scaffold the app: `bush new my-app`
-2. generate a controller: `bush make:controller PostController`
-3. generate a request: `bush make:request StorePostRequest`
-4. add a route in `routes/api.ts`
-
-## Tips for developers
-
-- Use generators to avoid writing boilerplate.
-- Always check generated files and customize them.
-- Keep routes and controllers simple: validation belongs in request classes, and business logic belongs in models or services.
+---
+**Previous:** [Realtime & WebSockets](realtime-websockets.md) | **Next:** [Generators](generators.md)

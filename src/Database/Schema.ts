@@ -99,6 +99,15 @@ export class SchemaBuilder {
     return this;
   }
 
+  objectId(fieldName: string, required = false): this {
+    this.fields.push({
+      name: fieldName,
+      type: 'objectId',
+      required,
+    });
+    return this;
+  }
+
   string(fieldName: string, length = 255, required = false): this {
     this.fields.push({
       name: fieldName,

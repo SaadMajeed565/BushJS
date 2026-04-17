@@ -12,6 +12,12 @@ import { MakeCommandCommand } from './Commands/MakeCommandCommand';
 import { MakeRouteCommand } from './Commands/MakeRouteCommand';
 import { SeedCommand } from './Commands/SeedCommand';
 import { SchemaCommand } from './Commands/SchemaCommand';
+import { MonitorHealthCommand } from './Commands/MonitorHealthCommand';
+import { MonitorMetricsCommand } from './Commands/MonitorMetricsCommand';
+import { BackupCreateCommand } from './Commands/BackupCreateCommand';
+import { BackupListCommand } from './Commands/BackupListCommand';
+import { BackupCleanupCommand } from './Commands/BackupCleanupCommand';
+import { HelpCommand } from './Commands/HelpCommand';
 
 export class ConsoleKernel {
   protected app: Application;
@@ -39,6 +45,12 @@ export class ConsoleKernel {
     this.register(new MakeRouteCommand(this.app));
     this.register(new SeedCommand(this.app));
     this.register(new SchemaCommand(this.app));
+    this.register(new MonitorHealthCommand(this.app));
+    this.register(new MonitorMetricsCommand(this.app));
+    this.register(new BackupCreateCommand(this.app));
+    this.register(new BackupListCommand(this.app));
+    this.register(new BackupCleanupCommand(this.app));
+    this.register(new HelpCommand(() => this.showHelp()));
   }
 
   async handle(argv: string[] = []): Promise<void> {
@@ -56,7 +68,10 @@ export class ConsoleKernel {
 
   showHelp(): void {
     console.log('Available commands:');
-    for (const command of this.commands.values()) {
+    const sorted = Array.from(this.commands.values()).sort((a, b) =>
+      a.signature.localeCompare(b.signature)
+    );
+    for (const command of sorted) {
       console.log(`  ${command.signature} - ${command.description}`);
     }
   }

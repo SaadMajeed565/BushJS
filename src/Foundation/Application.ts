@@ -1,4 +1,5 @@
 import path from 'path';
+import type { Request } from '../Http/Request';
 import { Container } from '../Container/Container';
 import { Router } from '../Http/Router';
 import { HttpKernel } from '../Http/Kernel';
@@ -18,6 +19,8 @@ export interface GraphQLRoute {
   schema: import('graphql').GraphQLSchema;
   rootValue?: any;
   middleware?: any[];
+  /** Per-request GraphQL context (merged with `{ request }`). */
+  buildContext?: (request: Request) => unknown | Promise<unknown>;
 }
 
 export interface SocketRoute {
@@ -95,8 +98,14 @@ export class Application {
     return this;
   }
 
-  graphql(path: string, schema: import('graphql').GraphQLSchema, rootValue: any = {}, middleware: any[] = []): this {
-    this.graphqlRoutes.push({ path, schema, rootValue, middleware });
+  graphql(
+    path: string,
+    schema: import('graphql').GraphQLSchema,
+    rootValue: any = {},
+    middleware: any[] = [],
+    buildContext?: (request: Request) => unknown | Promise<unknown>
+  ): this {
+    this.graphqlRoutes.push({ path, schema, rootValue, middleware, buildContext });
     return this;
   }
 

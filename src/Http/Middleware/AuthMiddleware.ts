@@ -19,6 +19,14 @@ export class AuthMiddleware extends Middleware {
       return;
     }
 
+    const user = await auth.user(request, this.guard);
+    if (!user) {
+      response.status(401).json({
+        message: 'Unauthenticated.',
+      });
+      return;
+    }
+
     await next();
   }
 }

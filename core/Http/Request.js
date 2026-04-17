@@ -43,6 +43,10 @@ class Request {
     }
     static async fromExpress(expressReq) {
         const request = new Request(expressReq.method, expressReq.path, expressReq.query, expressReq.body, expressReq.headers, expressReq.session, expressReq.user);
+        request.userId = expressReq.userId;
+        if (expressReq.token !== undefined) {
+            request.token = expressReq.token;
+        }
         request.file = expressReq.file;
         request.files = expressReq.files;
         return request;

@@ -1,160 +1,77 @@
 # App Directory
 
-This page teaches developers how to work inside the generated `app/` directory.
+`app/` is the main development surface of your application.
 
-## `app/Http/Controllers/`
+## `app/Http/Controllers`
 
-Controllers are the places where your app handles request logic.
+Use controllers to coordinate request handling:
 
-Example tasks for controllers:
-
-- return a JSON response
-- call a model to read or save data
-- use request classes for validation
-- decide which view or response to send
-
-Example controller:
+- read input and params
+- validate/authorize operations
+- call model/service code
+- return `Response`
 
 ```ts
-export class WelcomeController {
-  async index(request, response) {
-    return response.json({ message: 'Hello from Bush.js' });
+export class UserController {
+  async show(request, response) {
+    response.json({ id: request.params.id });
   }
 }
 ```
 
-### Use controllers for feature actions
+## `app/Http/Middleware`
 
-- `UserController` handles user endpoints
-- `BlogController` handles posts and comments
-- `AuthController` handles login and logout
+Use middleware for cross-cutting policies:
 
-## `app/Http/Middleware/`
+- authentication
+- role checks
+- rate or abuse protection
+- contextual request guards
 
-Middleware runs before controller code.
+## `app/Http/Requests`
 
-Use middleware to:
+Use request classes for validation/authorization logic to keep controller methods focused on behavior.
 
-- check authentication
-- block banned users
-- log request details
-- transform request data
+## `app/Models`
 
-Example middleware:
+Use models for persistence and query behavior:
 
 ```ts
-export class Authenticate {
-  async handle(request, response, next) {
-    if (!request.user) {
-      return response.unauthorized();
-    }
-    return next();
+export class Product extends Model {
+  static collection = 'products';
+  static fields = {
+    name: { type: 'string', required: true },
+    price: { type: 'int', required: true },
+  };
+}
+```
+
+## `app/Policies`
+
+Use policies for action-level access control:
+
+```ts
+export class ProductPolicy {
+  update(user, product) {
+    return user.role === 'admin' || user.id === String(product.owner_id);
   }
 }
 ```
 
-## `app/Http/Requests/`
+## `app/GraphQL`
 
-Request classes validate input and authorize the request.
+GraphQL schema/resolver code for query and mutation surfaces.
 
-Example usage:
+## `app/WebSockets`
 
-- validate form payloads
-- reject invalid JSON early
-- keep controller methods clean
+Realtime handlers and event protocol logic.
 
-Example request class:
+## Recommended Layering
 
-```ts
-export class StorePostRequest {
-  authorize() {
-    return true;
-  }
+- Route -> Middleware -> Controller
+- Controller -> Validation/Auth/Policy checks
+- Controller -> Model/Service
+- Controller -> Response
 
-  rules() {
-    return {
-      title: 'required|string',
-      body: 'required|string',
-    };
-  }
-}
-```
-
-## `app/Models/`
-
-Models hold data logic.
-
-Use models to:
-
-- query the database
-- prepare search filters
-- map records to objects
-
-Example model:
-
-```ts
-export class User {
-  static collection = 'users';
-}
-```
-
-## `app/Policies/`
-
-Policies centralize permission checks.
-
-Use policies when you want to control who can do what.
-
-Example policy:
-
-```ts
-export class ArticlePolicy {
-  update(user, article) {
-    return user.id === article.authorId;
-  }
-}
-```
-
-## `routes/`
-
-Define endpoints inside route files.
-
-Example route registration:
-
-```ts
-import { Router } from '@framework';
-import { WelcomeController } from '../app/Http/Controllers/WelcomeController';
-
-export function registerRoutes(router: Router) {
-  router.get('/hello', WelcomeController.index);
-}
-```
-
-## `config/`
-
-Use the `config/` folder for app settings.
-
-Examples:
-
-- enable debug mode
-- set the app URL
-- configure the database connection
-
-## `src/`
-
-The `src/` folder starts the app and ties everything together.
-
-You normally do not edit framework internals here. Instead, use it to:
-
-- load your routes
-- register middleware
-- boot the server
-
-## Developer workflow
-
-1. Add a route in `routes/`.
-2. Create or update a controller in `app/Http/Controllers/`.
-3. Validate input with a request in `app/Http/Requests/`.
-4. Access data with a model in `app/Models/`.
-5. Protect actions with a policy in `app/Policies/`.
-
-This workflow keeps your app code simple and easy to maintain.
+---
+**Previous:** [Project Structure](project-structure.md) | **Next:** [Configuration](configuration.md)

@@ -49,9 +49,10 @@ class MonitoringService {
     }
     // System metrics collection
     startSystemMetricsCollection() {
-        setInterval(() => {
+        const handle = setInterval(() => {
             this.collectSystemMetrics();
         }, 30000); // Every 30 seconds
+        handle.unref();
     }
     collectSystemMetrics() {
         const memUsage = process.memoryUsage();

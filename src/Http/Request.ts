@@ -84,6 +84,10 @@ export class Request {
       (expressReq as any).session,
       (expressReq as any).user
     );
+    request.userId = (expressReq as any).userId;
+    if ((expressReq as any).token !== undefined) {
+      request.token = (expressReq as any).token;
+    }
     request.file = (expressReq as any).file;
     request.files = (expressReq as any).files;
     return request;

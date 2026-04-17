@@ -13,6 +13,7 @@ A Laravel-inspired Node.js framework built with Express.js and MongoDB.
 - 🎯 Service container for dependency injection
 - 🖥️ CLI commands for scaffolding
 - 📁 Laravel-like folder structure
+- 📚 Comprehensive documentation with examples in `docs/`
 
 ## Requirements
 
@@ -87,6 +88,17 @@ npx bush make:command SampleCommand
    # Or with Docker
    docker start mongodb
    ```
+
+## Documentation
+
+Read the full framework docs in [`docs/README.md`](docs/README.md), including guides for:
+
+- routing and controllers
+- middleware and validation
+- authentication and authorization
+- database models and schema files
+- GraphQL and realtime WebSockets
+- CLI-generated app basics and advanced custom architecture with `bushjs`
 
 ## Quick Start
 

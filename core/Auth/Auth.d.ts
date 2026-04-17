@@ -32,6 +32,11 @@ export declare class TokenGuard implements Guard, ProviderAware {
     login(request: Request, user: AuthUser): void;
     logout(request: Request): void;
     private getTokenFromRequest;
+    /**
+     * Verify a JWT string and load the user via the registered provider (same rules as the API guard).
+     * Use for WebSocket in-band auth or any non-HTTP bearer context.
+     */
+    userFromTokenString(rawToken: string | null | undefined): Promise<AuthUser | null>;
 }
 export declare class Auth {
     private provider?;
@@ -41,6 +46,11 @@ export declare class Auth {
     guard(name?: string): Guard;
     check(request: Request, name?: string): Promise<boolean>;
     user(request: Request, name?: string): Promise<AuthUser | null>;
+    /**
+     * Resolve a user from a raw JWT (e.g. WebSocket JSON `{ type: "auth", token }`).
+     * Only supported for the **`api`** (token) guard; other guards return null.
+     */
+    userFromToken(token: string | null | undefined, guardName?: string): Promise<AuthUser | null>;
     id(request: Request, name?: string): string | null;
     attempt(request: Request, credentials: Record<string, any>, guardName?: string): Promise<boolean>;
     login(request: Request, user: AuthUser, guardName?: string): void;

@@ -1,104 +1,83 @@
 # Getting Started
 
-This guide teaches you how to create, run, and update your first Bush.js app.
+This guide builds a minimal feature from start to finish so you can see the framework workflow quickly.
 
-## Prerequisites
-
-- Node.js 18 or newer
-- npm or yarn
-
-## 1. Install the CLI
-
-Install the CLI globally to use the `bush` command:
+## 1. Create and Boot a Project
 
 ```bash
-npm install -g /path/to/bush-js-cli
-```
-
-When published, install it like this:
-
-```bash
-npm install -g @bushjs/cli
-```
-
-If you prefer not to install globally:
-
-```bash
-npx /path/to/bush-js-cli/core/src/cli.js new my-app
-```
-
-When published, use:
-
-```bash
-npx @bushjs/cli new my-app
-```
-
-## 2. Create a new app
-
-Create a new project with:
-
-```bash
-bush new my-app
-```
-
-This creates the starter app in `my-app`.
-
-## 3. Install dependencies
-
-```bash
+npx bushjs-cli new my-app
 cd my-app
 npm install
-```
-
-## 4. Run the app
-
-Start the local server:
-
-```bash
+cp .env.example .env
+npm run migrate
 npm run dev
 ```
 
-Now the app should be running on the configured URL.
+## 2. Add a Route and Controller
 
-## 5. Add your first route
-
-Edit `routes/api.ts` and add a new path:
+Create a controller in `app/Http/Controllers/UserController.ts`:
 
 ```ts
-import { Router } from '@framework';
-import { WelcomeController } from '../app/Http/Controllers/WelcomeController';
+import { Request, Response } from 'bushjs';
 
-export function registerRoutes(router: Router) {
-  router.get('/hello', WelcomeController.index);
-}
-```
-
-Then update `app/Http/Controllers/WelcomeController.ts`:
-
-```ts
-export class WelcomeController {
-  async index(request, response) {
-    return response.json({ message: 'Hello from Bush.js' });
+export class UserController {
+  async show(request: Request, response: Response): Promise<void> {
+    response.json({
+      id: request.params.id,
+      message: 'User loaded successfully',
+    });
   }
 }
 ```
 
-Reload the app and visit `/hello`.
+Register the route:
 
-## 6. What you will edit next
+```ts
+app.get('/users/:id', [UserController, 'show']);
+```
 
-Use these folders to build your app:
+## 3. Add Validation
 
-- `routes/` — define endpoints
-- `app/Http/Controllers/` — implement request logic
-- `app/Http/Requests/` — validate input
-- `app/Models/` — handle data operations
-- `app/Policies/` — enforce permissions
+```ts
+import { ValidatorV2 } from 'bushjs';
 
-## 7. Use generators to move faster
+app.post('/users', async (request, response) => {
+  const validator = ValidatorV2.make(request.body, {
+    name: 'required|string|min:2|max:50',
+    email: 'required|email',
+  });
+
+  if (validator.fails()) {
+    response.status(422).json({ errors: validator.errors() });
+    return;
+  }
+
+  response.status(201).json({ user: request.body });
+});
+```
+
+## 4. Protect Endpoints
+
+```ts
+import { AuthMiddleware } from 'bushjs';
+
+app.get('/profile', [ProfileController, 'show'], [new AuthMiddleware('api')]);
+```
+
+## 5. Generate Boilerplate Faster
 
 ```bash
-bush make:controller UserController
-bush make:request StoreUserRequest
-bush make:middleware Authenticate
+npm run bush:console -- make:controller UserController
+npm run bush:console -- make:model User
+npm run bush:console -- make:request StoreUserRequest
+npm run bush:console -- make:policy UserPolicy
 ```
+
+## 6. Next Reading
+
+- [Basics Overview](basics-overview.md)
+- [Project Structure](project-structure.md)
+- [Routing](routing.md)
+
+---
+**Previous:** [Installation](installation.md) | **Next:** [Basics](basics.md)
