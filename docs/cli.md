@@ -27,7 +27,11 @@ Shows:
 Inside a project, use:
 
 ```bash
-npm run bush:console -- <command>
+npm run bush <command>
+```
+Or
+```bash
+node bush <command>
 ```
 
 Examples:
