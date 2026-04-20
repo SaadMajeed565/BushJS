@@ -152,11 +152,12 @@ export function decryptPhone(encryptedPhone: string): string {
 }
 
 export function hashPassword(password: string): Promise<string> {
-  const bcrypt = require('bcrypt');
+  // Use bcryptjs (pure JS) to avoid native build toolchains.
+  const bcrypt = require('bcryptjs');
   return bcrypt.hash(password, 12);
 }
 
 export function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const bcrypt = require('bcrypt');
+  const bcrypt = require('bcryptjs');
   return bcrypt.compare(password, hash);
 }

@@ -2,6 +2,11 @@
 
 A Laravel-inspired Node.js framework built with Express.js and MongoDB.
 
+## Official Links
+
+- Full documentation: [Bush.js Docs README](https://github.com/SaadMajeed565/BushJS/blob/main/docs/README.md)
+- GitHub repository: [SaadMajeed565/BushJS](https://github.com/SaadMajeed565/BushJS/)
+
 ## Features
 
 - 🚀 Express.js HTTP server with middleware support
@@ -17,7 +22,7 @@ A Laravel-inspired Node.js framework built with Express.js and MongoDB.
 
 ## Requirements
 
-- Node.js 16+
+- Node.js 22+
 - MongoDB 4.0+
 - npm or yarn
 
@@ -28,7 +33,7 @@ Project scaffolding is handled by the CLI package, not by the framework core.
 Install the CLI package and use:
 
 ```bash
-npx bush new project-name
+npx bushjs-cli new project-name
 ```
 
 Then install dependencies and run:

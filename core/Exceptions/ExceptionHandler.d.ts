@@ -1,6 +1,2 @@
-import { Request } from '../Http/Request';
-import { Response } from '../Http/Response';
-export declare class ExceptionHandler {
-    handle(error: Error, request: Request, response: Response): void;
-}
+export { ExceptionHandler, Logger, LogLevel, logger, exceptionHandler, } from '../Foundation/ExceptionHandler';
 //# sourceMappingURL=ExceptionHandler.d.ts.map

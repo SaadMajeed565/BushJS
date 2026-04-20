@@ -140,11 +140,12 @@ function decryptPhone(encryptedPhone) {
     return exports.dataEncryption.decrypt(encryptedPhone);
 }
 function hashPassword(password) {
-    const bcrypt = require('bcrypt');
+    // Use bcryptjs (pure JS) to avoid native build toolchains.
+    const bcrypt = require('bcryptjs');
     return bcrypt.hash(password, 12);
 }
 function verifyPassword(password, hash) {
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     return bcrypt.compare(password, hash);
 }
 //# sourceMappingURL=DataEncryption.js.map

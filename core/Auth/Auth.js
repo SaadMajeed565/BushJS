@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.auth = exports.Auth = exports.TokenGuard = exports.SessionGuard = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const Config_1 = require("../Config/Config");
 class SessionGuard {
@@ -50,7 +50,7 @@ class SessionGuard {
         if (!userRecord || !credentials.password) {
             return null;
         }
-        const passwordMatches = await bcrypt_1.default.compare(credentials.password, userRecord.password);
+        const passwordMatches = await bcryptjs_1.default.compare(credentials.password, userRecord.password);
         if (!passwordMatches) {
             return null;
         }
@@ -144,7 +144,7 @@ class TokenGuard {
         if (!userRecord || !credentials.password) {
             return null;
         }
-        const passwordMatches = await bcrypt_1.default.compare(credentials.password, userRecord.password);
+        const passwordMatches = await bcryptjs_1.default.compare(credentials.password, userRecord.password);
         if (!passwordMatches) {
             return null;
         }
@@ -280,7 +280,7 @@ class Auth {
         this.guard(guardName).logout(request);
     }
     static async hashPassword(password) {
-        return bcrypt_1.default.hash(password, 10);
+        return bcryptjs_1.default.hash(password, 10);
     }
     generateToken(user) {
         const payload = { sub: user.id ?? user._id?.toString?.() };

@@ -4,13 +4,13 @@ import helmet from 'helmet';
 import expressWs from 'express-ws';
 import session from 'express-session';
 import rateLimit from 'express-rate-limit';
-import { graphqlHTTP } from 'express-graphql';
+import { createHandler } from 'graphql-http/lib/use/express';
 import { GraphQLSchema } from 'graphql';
 import { Request } from './Request';
 import { Response } from './Response';
 import { Application } from '../Foundation/Application';
 import { Router } from './Router';
-import { ExceptionHandler } from '../Exceptions/ExceptionHandler';
+import { exceptionHandler } from '../Foundation/ExceptionHandler';
 import { NotFoundException } from '../Exceptions/HttpExceptions';
 import { auth } from '../Auth/Auth';
 import { config } from '../Config/Config';
@@ -264,11 +264,11 @@ export class HttpKernel {
         return mw;
       });
 
-      this.expressApp.use(
-        route.path,
-        ...middleware,
-        graphqlHTTP(async (req, res) => {
-          const bushRequest = await Request.fromExpress(req as express.Request);
+      const handler = createHandler({
+        schema: route.schema,
+        rootValue: route.rootValue,
+        context: async (req, _res) => {
+          const bushRequest = await Request.fromExpress(req as unknown as express.Request);
           await auth.user(bushRequest, 'api');
           let context: Record<string, unknown> = { request: bushRequest };
           if (route.buildContext) {
@@ -277,14 +277,12 @@ export class HttpKernel {
               context = { ...context, ...(extra as Record<string, unknown>) };
             }
           }
-          return {
-            schema: route.schema,
-            rootValue: route.rootValue,
-            context,
-            graphiql: process.env.NODE_ENV !== 'production',
-          };
-        })
-      );
+          return context;
+        },
+      });
+
+      // graphql-http expects an `all` route to support both GET and POST.
+      (this.expressApp as any).all(route.path, ...middleware, handler);
     });
   }
 
@@ -321,10 +319,9 @@ export class HttpKernel {
       request.params = matched.params;
       await this.executeAction(matched.route.action, request, response);
     } catch (error: any) {
-      const exceptionHandler = new ExceptionHandler();
       const request = await Request.fromExpress(req);
       const response = new Response(res);
-      exceptionHandler.handle(error, request, response);
+      exceptionHandler.renderError(error, request, response);
     }
   }
 

@@ -10,10 +10,10 @@ const helmet_1 = __importDefault(require("helmet"));
 const express_ws_1 = __importDefault(require("express-ws"));
 const express_session_1 = __importDefault(require("express-session"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const express_graphql_1 = require("express-graphql");
+const express_2 = require("graphql-http/lib/use/express");
 const Request_1 = require("./Request");
 const Response_1 = require("./Response");
-const ExceptionHandler_1 = require("../Exceptions/ExceptionHandler");
+const ExceptionHandler_1 = require("../Foundation/ExceptionHandler");
 const HttpExceptions_1 = require("../Exceptions/HttpExceptions");
 const Auth_1 = require("../Auth/Auth");
 const Config_1 = require("../Config/Config");
@@ -244,23 +244,24 @@ class HttpKernel {
                 }
                 return mw;
             });
-            this.expressApp.use(route.path, ...middleware, (0, express_graphql_1.graphqlHTTP)(async (req, res) => {
-                const bushRequest = await Request_1.Request.fromExpress(req);
-                await Auth_1.auth.user(bushRequest, 'api');
-                let context = { request: bushRequest };
-                if (route.buildContext) {
-                    const extra = await route.buildContext(bushRequest);
-                    if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
-                        context = { ...context, ...extra };
+            const handler = (0, express_2.createHandler)({
+                schema: route.schema,
+                rootValue: route.rootValue,
+                context: async (req, _res) => {
+                    const bushRequest = await Request_1.Request.fromExpress(req);
+                    await Auth_1.auth.user(bushRequest, 'api');
+                    let context = { request: bushRequest };
+                    if (route.buildContext) {
+                        const extra = await route.buildContext(bushRequest);
+                        if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+                            context = { ...context, ...extra };
+                        }
                     }
-                }
-                return {
-                    schema: route.schema,
-                    rootValue: route.rootValue,
-                    context,
-                    graphiql: process.env.NODE_ENV !== 'production',
-                };
-            }));
+                    return context;
+                },
+            });
+            // graphql-http expects an `all` route to support both GET and POST.
+            this.expressApp.all(route.path, ...middleware, handler);
         });
     }
     registerSocketRoutes() {
@@ -292,10 +293,9 @@ class HttpKernel {
             await this.executeAction(matched.route.action, request, response);
         }
         catch (error) {
-            const exceptionHandler = new ExceptionHandler_1.ExceptionHandler();
             const request = await Request_1.Request.fromExpress(req);
             const response = new Response_1.Response(res);
-            exceptionHandler.handle(error, request, response);
+            ExceptionHandler_1.exceptionHandler.renderError(error, request, response);
         }
     }
     async executeAction(action, request, response) {
