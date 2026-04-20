@@ -67,10 +67,18 @@ app.get('/profile', [ProfileController, 'show'], [new AuthMiddleware('api')]);
 ## 5. Generate Boilerplate Faster
 
 ```bash
-npm run bush:console -- make:controller UserController
-npm run bush:console -- make:model User
-npm run bush:console -- make:request StoreUserRequest
-npm run bush:console -- make:policy UserPolicy
+npm run bush make:controller UserController
+npm run bush make:model User
+npm run bush make:request StoreUserRequest
+npm run bush make:policy UserPolicy
+```
+Or you can also use these commands:
+
+```bash
+node bush make:controller UserController
+node bush make:model User
+node bush make:request StoreUserRequest
+node bush make:policy UserPolicy
 ```
 
 ## 6. Next Reading

@@ -27,27 +27,43 @@ Shows:
 Inside a project, use:
 
 ```bash
-npm run bush:console -- <command>
+npm run bush <command>
+```
+Or
+```bash
+node bush <command>
 ```
 
 Examples:
 
 ```bash
-npm run bush:console -- make:model Product
-npm run bush:console -- make:controller OrderController
-npm run bush:console -- make:middleware EnsureAdmin
-npm run bush:console -- make:request StoreOrderRequest
-npm run bush:console -- make:policy OrderPolicy
-npm run bush:console -- make:schema create_orders
-npm run bush:console -- make:seeder OrderSeeder
-npm run bush:console -- schema
-npm run bush:console -- seed
+npm run bush make:model Product
+npm run bush make:controller OrderController
+npm run bush make:middleware EnsureAdmin
+npm run bush make:request StoreOrderRequest
+npm run bush make:policy OrderPolicy
+npm run bush make:schema create_orders
+npm run bush make:seeder OrderSeeder
+npm run bush schema
+npm run bush seed
+```
+Or by using this:
+```bash
+node bush make:model Product
+node bush make:controller OrderController
+node bush make:middleware EnsureAdmin
+node bush make:request StoreOrderRequest
+node bush make:policy OrderPolicy
+node bush make:schema create_orders
+node bush make:seeder OrderSeeder
+node bush schema
+node bush seed
 ```
 
 You can also run:
 
 ```bash
-npx bushjs-console
+npx bush
 ```
 
 ## Command Families
