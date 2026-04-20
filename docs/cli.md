@@ -59,7 +59,7 @@ node bush seed
 You can also run:
 
 ```bash
-npx bushjs-console
+npx bush
 ```
 
 ## Command Families
