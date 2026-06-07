@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeMiddlewareCommand extends Command {
   signature = 'make:middleware';
-  description = 'Create a new middleware class.';
+  description = 'Create a new middleware class in the configured middleware directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakeMiddlewareCommand extends Command {
       return;
     }
 
-    const middlewarePath = path.resolve(this.app.basePath, 'app', 'Http', 'Middleware', `${name}.ts`);
+    const middlewarePath = path.resolve(this.app.basePath, config.structure.middleware, `${name}.ts`);
     await fs.mkdir(path.dirname(middlewarePath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

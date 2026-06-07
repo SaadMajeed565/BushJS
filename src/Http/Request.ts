@@ -14,6 +14,7 @@ export class Request {
   token?: string;
   file?: Express.Multer.File;
   files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  private clientIp?: string;
 
   constructor(
     method: string,
@@ -85,6 +86,7 @@ export class Request {
       (expressReq as any).user
     );
     request.userId = (expressReq as any).userId;
+    request.clientIp = expressReq.ip;
     if ((expressReq as any).token !== undefined) {
       request.token = (expressReq as any).token;
     }
@@ -118,6 +120,10 @@ export class Request {
   }
 
   ip(): string | undefined {
+    if (this.clientIp && this.clientIp.trim()) {
+      return this.clientIp.trim();
+    }
+
     const xForwardedFor = this.header('x-forwarded-for');
     if (typeof xForwardedFor === 'string') {
       return xForwardedFor.split(',')[0].trim();

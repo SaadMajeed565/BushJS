@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeCommandCommand extends Command {
   signature = 'make:command';
-  description = 'Create a new console command class.';
+  description = 'Create a new console command class in the configured commands directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakeCommandCommand extends Command {
       return;
     }
 
-    const commandPath = path.resolve(this.app.basePath, 'app', 'Console', 'Commands', `${name}Command.ts`);
+    const commandPath = path.resolve(this.app.basePath, config.structure.commands, `${name}Command.ts`);
     await fs.mkdir(path.dirname(commandPath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeRequestCommand extends Command {
   signature = 'make:request';
-  description = 'Create a new form request class.';
+  description = 'Create a new form request class in the configured requests directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -21,7 +22,7 @@ export class MakeRequestCommand extends Command {
     }
 
     const name = rawName.endsWith('Request') ? rawName : `${rawName}Request`;
-    const requestPath = path.resolve(this.app.basePath, 'app', 'Http', 'Requests', `${name}.ts`);
+    const requestPath = path.resolve(this.app.basePath, config.structure.requests, `${name}.ts`);
     await fs.mkdir(path.dirname(requestPath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

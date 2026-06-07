@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeRouteCommand extends Command {
   signature = 'make:route';
-  description = 'Create a new route registration file.';
+  description = 'Create a new route registration file in the configured routes directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakeRouteCommand extends Command {
       return;
     }
 
-    const routePath = path.resolve(this.app.basePath, 'routes', `${name}.ts`);
+    const routePath = path.resolve(this.app.basePath, config.structure.routes, `${name}.ts`);
     await fs.mkdir(path.dirname(routePath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

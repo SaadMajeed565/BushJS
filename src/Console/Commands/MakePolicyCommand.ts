@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakePolicyCommand extends Command {
   signature = 'make:policy';
-  description = 'Create a new policy class.';
+  description = 'Create a new policy class in the configured policies directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakePolicyCommand extends Command {
       return;
     }
 
-    const policyPath = path.resolve(this.app.basePath, 'app', 'Policies', `${name}Policy.ts`);
+    const policyPath = path.resolve(this.app.basePath, config.structure.policies, `${name}Policy.ts`);
     await fs.mkdir(path.dirname(policyPath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

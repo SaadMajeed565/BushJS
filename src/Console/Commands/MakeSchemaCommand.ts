@@ -2,6 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
+import { resolveCommandDir } from './support';
 
 function toPascalCase(value: string): string {
   return value
@@ -17,7 +19,7 @@ function normalizeName(value: string): string {
 
 export class MakeSchemaCommand extends Command {
   signature = 'make:schema';
-  description = 'Create a new database schema file.';
+  description = 'Create a new database schema file (supports --path override).';
 
   protected app: Application;
 
@@ -39,7 +41,7 @@ export class MakeSchemaCommand extends Command {
       .slice(0, 14);
     const normalized = normalizeName(name);
     const fileName = `${timestamp}_${normalized}.ts`;
-    const schemasPath = path.resolve(this.app.basePath, 'database', 'schemas');
+    const schemasPath = resolveCommandDir(this.app.basePath, config.structure.schemas, args);
     await fs.mkdir(schemasPath, { recursive: true });
 
     const className = `${toPascalCase(name)}Schema`;
@@ -49,6 +51,6 @@ export class MakeSchemaCommand extends Command {
     stub = stub.replace(/{{class}}/g, className).replace(/{{table}}/g, tableName);
 
     await fs.writeFile(path.join(schemasPath, fileName), stub);
-    console.log(`Schema created at database/schemas/${fileName}`);
+    console.log(`Schema created at ${path.join(schemasPath, fileName)}`);
   }
 }

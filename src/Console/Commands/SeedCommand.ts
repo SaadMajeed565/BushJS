@@ -1,11 +1,12 @@
-import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
+import { collectRunnableFiles, loadCommandClass, resolveCommandDir } from './support';
 
 export class SeedCommand extends Command {
   signature = 'seed';
-  description = 'Run database seeders.';
+  description = 'Run database seeders (CommonJS-first; supports --path override).';
 
   protected app: Application;
 
@@ -14,22 +15,19 @@ export class SeedCommand extends Command {
     this.app = app;
   }
 
-  async handle(): Promise<void> {
-    const seedersPath = path.resolve(this.app.basePath, 'database', 'seeds');
+  async handle(args: string[]): Promise<void> {
+    const seedersPath = resolveCommandDir(this.app.basePath, config.structure.seeders, args);
     try {
-      const files = await fs.readdir(seedersPath);
-      const seederFiles = files.filter((name) => name.endsWith('.ts') || name.endsWith('.js')).sort();
-
+      const seederFiles = await collectRunnableFiles([seedersPath]);
       if (seederFiles.length === 0) {
-        console.log('No seeders found.');
+        console.log(`No seeders found in ${seedersPath}.`);
         return;
       }
 
       console.log('Running seeders...');
-      for (const file of seederFiles) {
-        const filePath = path.resolve(seedersPath, file);
-        const module = await import(filePath);
-        const SeederClass = module.default ?? module[Object.keys(module)[0]];
+      for (const filePath of seederFiles) {
+        const file = path.basename(filePath);
+        const SeederClass = loadCommandClass(filePath);
         if (!SeederClass) {
           console.warn(`Skipping seeder ${file}: no default export found.`);
           continue;
@@ -47,7 +45,7 @@ export class SeedCommand extends Command {
       console.log('Seeders completed successfully.');
     } catch (error: any) {
       if (error.code === 'ENOENT') {
-        console.log('database/seeds directory does not exist.');
+        console.log(`${seedersPath} does not exist.`);
         return;
       }
       throw error;

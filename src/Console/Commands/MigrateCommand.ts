@@ -1,11 +1,12 @@
-import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
+import { collectRunnableFiles, loadCommandClass, resolveCommandDir } from './support';
 
 export class MigrateCommand extends Command {
-  signature = 'schema';
-  description = 'Run database schema files';
+  signature = 'migrate';
+  description = 'Run database migrations/schemas (supports --path and --rollback).';
 
   protected app: Application;
 
@@ -16,40 +17,22 @@ export class MigrateCommand extends Command {
 
   async handle(args: string[]): Promise<void> {
     const rollback = args.includes('--rollback');
-    const schemaDirs = [
-      path.resolve(this.app.basePath, 'database', 'schemas'),
-      path.resolve(this.app.basePath, 'database', 'migrations'),
-    ];
-    const schemaFiles = new Set<string>();
+    const defaultSchemaDir = resolveCommandDir(this.app.basePath, config.structure.schemas, args);
+    const migrationDir = path.resolve(this.app.basePath, 'database', 'migrations');
 
     try {
-      for (const dir of schemaDirs) {
-        try {
-          const files = await fs.readdir(dir);
-          files
-            .filter((name) => name.endsWith('.ts') || name.endsWith('.js'))
-            .forEach((file) => schemaFiles.add(path.join(dir, file)));
-        } catch (error: any) {
-          if (error.code !== 'ENOENT') {
-            throw error;
-          }
-        }
-      }
-
-      if (schemaFiles.size === 0) {
+      const schemaFiles = await collectRunnableFiles([defaultSchemaDir, migrationDir]);
+      if (schemaFiles.length === 0) {
         console.log('No schema files found.');
         return;
       }
 
-      const sortedFiles = Array.from(schemaFiles).sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
-
       if (rollback) {
         console.log('Rolling back schema files...');
-        for (let i = sortedFiles.length - 1; i >= 0; i--) {
-          const filePath = sortedFiles[i];
+        for (let i = schemaFiles.length - 1; i >= 0; i--) {
+          const filePath = schemaFiles[i];
           const file = path.basename(filePath);
-          const module = await import(filePath);
-          const SchemaClass = module.default ?? module[Object.keys(module)[0]];
+          const SchemaClass = loadCommandClass(filePath);
           if (!SchemaClass) {
             console.warn(`Skipping schema file ${file}: no default export found.`);
             continue;
@@ -68,10 +51,9 @@ export class MigrateCommand extends Command {
       }
 
       console.log('Running schema files...');
-      for (const filePath of sortedFiles) {
+      for (const filePath of schemaFiles) {
         const file = path.basename(filePath);
-        const module = await import(filePath);
-        const SchemaClass = module.default ?? module[Object.keys(module)[0]];
+        const SchemaClass = loadCommandClass(filePath);
         if (!SchemaClass) {
           console.warn(`Skipping schema file ${file}: no default export found.`);
           continue;

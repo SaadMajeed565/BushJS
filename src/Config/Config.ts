@@ -69,6 +69,18 @@ export interface FilesystemsConfig {
   };
 }
 
+export interface StructureConfig {
+  controllers: string;
+  middleware: string;
+  requests: string;
+  models: string;
+  policies: string;
+  routes: string;
+  commands: string;
+  schemas: string;
+  seeders: string;
+}
+
 class Config {
   private configs: Map<string, any> = new Map();
 
@@ -85,6 +97,7 @@ class Config {
     this.configs.set('encryption', this.encryptionConfig());
     this.configs.set('cache', this.cacheConfig());
     this.configs.set('filesystems', this.filesystemsConfig());
+    this.configs.set('structure', this.structureConfig());
   }
 
   get<T>(key: string, defaultValue?: T): T {
@@ -148,6 +161,16 @@ class Config {
   }
 
   private authConfig(): AuthConfig {
+    const jwtSecret = this.env('AUTH_JWT_SECRET');
+    const sessionSecret = this.env('AUTH_SESSION_SECRET');
+    const isProduction = this.env('NODE_ENV', 'development') === 'production';
+
+    if (isProduction && (!jwtSecret || !sessionSecret)) {
+      throw new Error(
+        'AUTH_JWT_SECRET and AUTH_SESSION_SECRET are required in production.'
+      );
+    }
+
     return {
       defaults: {
         guard: this.env('AUTH_GUARD', 'api'),
@@ -161,8 +184,8 @@ class Config {
           driver: 'session'
         }
       },
-      jwt_secret: this.env('AUTH_JWT_SECRET', 'bush_secret'),
-      session_secret: this.env('AUTH_SESSION_SECRET', 'session_secret')
+      jwt_secret: jwtSecret || 'bush_dev_jwt_secret',
+      session_secret: sessionSecret || 'bush_dev_session_secret'
     };
   }
 
@@ -222,6 +245,20 @@ class Config {
     };
   }
 
+  private structureConfig(): StructureConfig {
+    return {
+      controllers: this.env('STRUCTURE_CONTROLLERS_DIR', 'app/Http/Controllers'),
+      middleware: this.env('STRUCTURE_MIDDLEWARE_DIR', 'app/Http/Middleware'),
+      requests: this.env('STRUCTURE_REQUESTS_DIR', 'app/Http/Requests'),
+      models: this.env('STRUCTURE_MODELS_DIR', 'app/Models'),
+      policies: this.env('STRUCTURE_POLICIES_DIR', 'app/Policies'),
+      routes: this.env('STRUCTURE_ROUTES_DIR', 'routes'),
+      commands: this.env('STRUCTURE_COMMANDS_DIR', 'app/Console/Commands'),
+      schemas: this.env('STRUCTURE_SCHEMAS_DIR', 'database/schemas'),
+      seeders: this.env('STRUCTURE_SEEDERS_DIR', 'database/seeds')
+    };
+  }
+
   get app(): AppConfig {
     return this.get<AppConfig>('app');
   }
@@ -248,6 +285,10 @@ class Config {
 
   get filesystems(): FilesystemsConfig {
     return this.get<FilesystemsConfig>('filesystems');
+  }
+
+  get structure(): StructureConfig {
+    return this.get<StructureConfig>('structure');
   }
 
   private env(key: string, defaultValue: any = null): any {

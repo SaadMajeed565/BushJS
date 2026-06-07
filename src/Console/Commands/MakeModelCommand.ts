@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeModelCommand extends Command {
   signature = 'make:model';
-  description = 'Create a new model class.';
+  description = 'Create a new model class in the configured models directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakeModelCommand extends Command {
       return;
     }
 
-    const modelPath = path.resolve(this.app.basePath, 'app', 'Models', `${name}.ts`);
+    const modelPath = path.resolve(this.app.basePath, config.structure.models, `${name}.ts`);
     await fs.mkdir(path.dirname(modelPath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

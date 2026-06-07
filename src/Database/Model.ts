@@ -91,6 +91,12 @@ export abstract class Model {
     this.model = connection.getConnection().model(this.collection, this.schema as Schema);
   }
 
+  protected static ensureInitialized(this: typeof Model): void {
+    if (!this.model) {
+      this.initialize();
+    }
+  }
+
   private static mapFieldToMongoose(fieldDef: any): any {
     const mongooseDef: any = {};
     switch (fieldDef.type) {
@@ -121,6 +127,7 @@ export abstract class Model {
   }
 
   static query<T extends typeof Model>(this: T): QueryBuilder {
+    this.ensureInitialized();
     return new QueryBuilder(this.model);
   }
 
@@ -129,10 +136,12 @@ export abstract class Model {
   }
 
   static async find<T extends typeof Model>(this: T, id: string | mongoose.Types.ObjectId): Promise<Document | null> {
+    this.ensureInitialized();
     return await this.model.findById(id);
   }
 
   static async create<T extends typeof Model>(this: T, attributes: Record<string, any>): Promise<Document> {
+    this.ensureInitialized();
     return await this.model.create(attributes);
   }
 
@@ -153,14 +162,17 @@ export abstract class Model {
   }
 
   static async update<T extends typeof Model>(this: T, id: string | mongoose.Types.ObjectId, attributes: Record<string, any>): Promise<Document | null> {
+    this.ensureInitialized();
     return await this.model.findByIdAndUpdate(id, attributes, { new: true });
   }
 
   static async delete<T extends typeof Model>(this: T, id: string | mongoose.Types.ObjectId): Promise<Document | null> {
+    this.ensureInitialized();
     return await this.model.findByIdAndDelete(id);
   }
 
   static async paginate<T extends typeof Model>(this: T, page = 1, perPage = 15): Promise<{ data: Document[], total: number, page: number, perPage: number }> {
+    this.ensureInitialized();
     const skip = (page - 1) * perPage;
     const [data, total] = await Promise.all([
       this.model.find().skip(skip).limit(perPage),

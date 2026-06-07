@@ -2,6 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
+import { resolveCommandDir } from './support';
 
 function toPascalCase(value: string): string {
   return value
@@ -17,7 +19,7 @@ function normalizeName(value: string): string {
 
 export class MakeSeederCommand extends Command {
   signature = 'make:seeder';
-  description = 'Create a new database seeder file.';
+  description = 'Create a new database seeder file (supports --path override).';
 
   protected app: Application;
 
@@ -39,7 +41,7 @@ export class MakeSeederCommand extends Command {
       .slice(0, 14);
     const normalized = normalizeName(name);
     const fileName = `${timestamp}_${normalized}_seeder.ts`;
-    const seedersPath = path.resolve(this.app.basePath, 'database', 'seeds');
+    const seedersPath = resolveCommandDir(this.app.basePath, config.structure.seeders, args);
     await fs.mkdir(seedersPath, { recursive: true });
 
     const className = `${toPascalCase(name)}Seeder`;
@@ -48,6 +50,6 @@ export class MakeSeederCommand extends Command {
     stub = stub.replace(/{{class}}/g, className);
 
     await fs.writeFile(path.join(seedersPath, fileName), stub);
-    console.log(`Seeder created at database/seeds/${fileName}`);
+    console.log(`Seeder created at ${path.join(seedersPath, fileName)}`);
   }
 }

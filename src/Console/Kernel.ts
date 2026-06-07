@@ -12,6 +12,7 @@ import { MakeCommandCommand } from './Commands/MakeCommandCommand';
 import { MakeRouteCommand } from './Commands/MakeRouteCommand';
 import { SeedCommand } from './Commands/SeedCommand';
 import { SchemaCommand } from './Commands/SchemaCommand';
+import { MigrateCommand } from './Commands/MigrateCommand';
 import { MonitorHealthCommand } from './Commands/MonitorHealthCommand';
 import { MonitorMetricsCommand } from './Commands/MonitorMetricsCommand';
 import { BackupCreateCommand } from './Commands/BackupCreateCommand';
@@ -45,6 +46,7 @@ export class ConsoleKernel {
     this.register(new MakeRouteCommand(this.app));
     this.register(new SeedCommand(this.app));
     this.register(new SchemaCommand(this.app));
+    this.register(new MigrateCommand(this.app));
     this.register(new MonitorHealthCommand(this.app));
     this.register(new MonitorMetricsCommand(this.app));
     this.register(new BackupCreateCommand(this.app));
@@ -67,12 +69,44 @@ export class ConsoleKernel {
   }
 
   showHelp(): void {
-    console.log('Available commands:');
-    const sorted = Array.from(this.commands.values()).sort((a, b) =>
-      a.signature.localeCompare(b.signature)
-    );
-    for (const command of sorted) {
-      console.log(`  ${command.signature} - ${command.description}`);
+    const groups: Array<{ title: string; matcher: (signature: string) => boolean }> = [
+      { title: 'General', matcher: (signature) => signature === 'help' },
+      { title: 'Generators', matcher: (signature) => signature.startsWith('make:') },
+      { title: 'Database', matcher: (signature) => signature === 'schema' || signature === 'seed' || signature === 'migrate' },
+      { title: 'Monitoring', matcher: (signature) => signature.startsWith('monitor:') },
+      { title: 'Backups', matcher: (signature) => signature.startsWith('backup:') },
+    ];
+
+    const commands = Array.from(this.commands.values());
+    const assigned = new Set<string>();
+
+    console.log('Available commands:\n');
+    for (const group of groups) {
+      const inGroup = commands
+        .filter((command) => group.matcher(command.signature))
+        .sort((a, b) => a.signature.localeCompare(b.signature));
+
+      if (inGroup.length === 0) {
+        continue;
+      }
+
+      console.log(`${group.title}:`);
+      for (const command of inGroup) {
+        assigned.add(command.signature);
+        console.log(`  ${command.signature.padEnd(20)} ${command.description}`);
+      }
+      console.log('');
+    }
+
+    const other = commands
+      .filter((command) => !assigned.has(command.signature))
+      .sort((a, b) => a.signature.localeCompare(b.signature));
+
+    if (other.length > 0) {
+      console.log('Other:');
+      for (const command of other) {
+        console.log(`  ${command.signature.padEnd(20)} ${command.description}`);
+      }
     }
   }
 }

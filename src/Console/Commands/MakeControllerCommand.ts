@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Command } from '../Command';
 import { Application } from '../../Foundation/Application';
+import { config } from '../../Config/Config';
 
 export class MakeControllerCommand extends Command {
   signature = 'make:controller';
-  description = 'Create a new controller class.';
+  description = 'Create a new HTTP controller class in the configured controllers directory.';
   protected app: Application;
 
   constructor(app: Application) {
@@ -20,7 +21,7 @@ export class MakeControllerCommand extends Command {
       return;
     }
 
-    const controllerPath = path.resolve(this.app.basePath, 'app', 'Http', 'Controllers', `${name}.ts`);
+    const controllerPath = path.resolve(this.app.basePath, config.structure.controllers, `${name}.ts`);
     await fs.mkdir(path.dirname(controllerPath), { recursive: true });
 
     const stubsPath = path.resolve(__dirname, '../stubs');

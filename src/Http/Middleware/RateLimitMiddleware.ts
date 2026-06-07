@@ -7,6 +7,7 @@ interface RateLimitConfig {
   windowMs: number; // in milliseconds
   message?: string;
   skipSuccessfulRequests?: boolean;
+  trustProxyHeaders?: boolean;
 }
 
 interface AttemptRecord {
@@ -24,7 +25,8 @@ export class RateLimitMiddleware extends Middleware {
       maxAttempts: config.maxAttempts || 60,
       windowMs: config.windowMs || 15 * 60 * 1000, // 15 minutes default
       message: config.message || 'Too many requests, please try again later.',
-      skipSuccessfulRequests: config.skipSuccessfulRequests ?? false
+      skipSuccessfulRequests: config.skipSuccessfulRequests ?? false,
+      trustProxyHeaders: config.trustProxyHeaders ?? false
     };
 
     // Cleanup expired entries every hour
@@ -69,17 +71,19 @@ export class RateLimitMiddleware extends Middleware {
   }
 
   private getKey(request: Request): string {
-    // Use IP address as the key
+    // By default do not trust spoofable proxy headers.
     let ip = request.ip() || 'unknown';
-    
-    const xForwardedFor = request.header('x-forwarded-for');
-    if (xForwardedFor) {
-      ip = typeof xForwardedFor === 'string' ? xForwardedFor : xForwardedFor[0];
-    }
 
-    const cfConnectingIp = request.header('cf-connecting-ip');
-    if (cfConnectingIp) {
-      ip = typeof cfConnectingIp === 'string' ? cfConnectingIp : cfConnectingIp[0];
+    if (this.config.trustProxyHeaders) {
+      const xForwardedFor = request.header('x-forwarded-for');
+      if (xForwardedFor) {
+        ip = typeof xForwardedFor === 'string' ? xForwardedFor : xForwardedFor[0];
+      }
+
+      const cfConnectingIp = request.header('cf-connecting-ip');
+      if (cfConnectingIp) {
+        ip = typeof cfConnectingIp === 'string' ? cfConnectingIp : cfConnectingIp[0];
+      }
     }
 
     return ip.split(',')[0].trim();
