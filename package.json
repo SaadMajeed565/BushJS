@@ -1,6 +1,6 @@
 {
   "name": "bushjs",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "A Node.js framework core package.",
   "author": "Saad Majeed <saadmajeed.dev@gmail.com>",
   "license": "MIT",

@@ -10,6 +10,11 @@
 npm install bushjs
 ```
 
+## Official Links
+
+- Full documentation: [Bush.js Docs README](https://github.com/SaadMajeed565/BushJS/blob/main/docs/README.md)
+- GitHub repository: [SaadMajeed565/BushJS](https://github.com/SaadMajeed565/BushJS/)
+
 ## Features
 
 - **HTTP Server** — Express.js-based server with middleware pipeline
@@ -303,22 +308,22 @@ npm run test:coverage
 
 ## Documentation
 
-Full documentation is available in [`docs/README.md`](docs/README.md):
+Full documentation is available on GitHub:
 
-- [Introduction](docs/introduction.md)
-- [Installation](docs/installation.md)
-- [Getting Started](docs/getting-started.md)
-- [Configuration](docs/configuration.md)
-- [Routing](docs/routing.md)
-- [Controllers](docs/controllers.md)
-- [Middleware](docs/middleware.md)
-- [Validation](docs/validation.md)
-- [Authentication](docs/authentication.md)
-- [Authorization](docs/authorization.md)
-- [Database](docs/database.md)
-- [GraphQL](docs/graphql.md)
-- [WebSockets](docs/realtime-websockets.md)
-- [CLI Reference](docs/cli.md)
+- [Introduction](https://github.com/SaadMajeed565/BushJS/blob/main/docs/introduction.md)
+- [Installation](https://github.com/SaadMajeed565/BushJS/blob/main/docs/installation.md)
+- [Getting Started](https://github.com/SaadMajeed565/BushJS/blob/main/docs/getting-started.md)
+- [Configuration](https://github.com/SaadMajeed565/BushJS/blob/main/docs/configuration.md)
+- [Routing](https://github.com/SaadMajeed565/BushJS/blob/main/docs/routing.md)
+- [Controllers](https://github.com/SaadMajeed565/BushJS/blob/main/docs/controllers.md)
+- [Middleware](https://github.com/SaadMajeed565/BushJS/blob/main/docs/middleware.md)
+- [Validation](https://github.com/SaadMajeed565/BushJS/blob/main/docs/validation.md)
+- [Authentication](https://github.com/SaadMajeed565/BushJS/blob/main/docs/authentication.md)
+- [Authorization](https://github.com/SaadMajeed565/BushJS/blob/main/docs/authorization.md)
+- [Database](https://github.com/SaadMajeed565/BushJS/blob/main/docs/database.md)
+- [GraphQL](https://github.com/SaadMajeed565/BushJS/blob/main/docs/graphql.md)
+- [WebSockets](https://github.com/SaadMajeed565/BushJS/blob/main/docs/realtime-websockets.md)
+- [CLI Reference](https://github.com/SaadMajeed565/BushJS/blob/main/docs/cli.md)
 
 ## Requirements
 
