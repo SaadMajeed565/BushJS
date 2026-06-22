@@ -1,6 +1,17 @@
 # Bush.js
 
+[![CI](https://github.com/SaadMajeed565/BushJS/actions/workflows/ci.yml/badge.svg)](https://github.com/SaadMajeed565/BushJS/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/bushjs)](https://www.npmjs.com/package/bushjs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Laravel-inspired Node.js framework built with Express.js and MongoDB.
+
+```bash
+npx bushjs-cli new my-app
+cd my-app
+npm install
+npm run dev
+```
 
 ## Official Links
 
