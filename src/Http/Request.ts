@@ -1,29 +1,33 @@
 import { IncomingMessage } from 'http';
 import express from 'express';
 
-export class Request {
+const DEFAULT_MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+export class Request<TUser = unknown> {
   method: string;
   path: string;
   query: Record<string, string>;
-  body: any;
+  body: unknown;
   headers: Record<string, string | string[]>;
   params: Record<string, string> = {};
-  session?: any;
-  user?: any;
+  session?: Record<string, unknown>;
+  user?: TUser;
   userId?: string;
   token?: string;
   file?: Express.Multer.File;
   files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
   private clientIp?: string;
+  readonly expressRequest?: express.Request;
+  private static maxBodyBytes = DEFAULT_MAX_BODY_BYTES;
 
   constructor(
     method: string,
     path: string,
     query: Record<string, string>,
-    body: any,
+    body: unknown,
     headers: Record<string, string | string[]>,
-    session?: any,
-    user?: any
+    session?: Record<string, unknown>,
+    user?: TUser
   ) {
     this.method = method;
     this.path = path;
@@ -34,12 +38,23 @@ export class Request {
     this.user = user;
   }
 
+  static setMaxBodyBytes(bytes: number): void {
+    Request.maxBodyBytes = bytes;
+  }
+
   static async fromNode(nodeReq: IncomingMessage): Promise<Request> {
     const url = new URL(nodeReq.url ?? '/', `http://${nodeReq.headers.host ?? 'localhost'}`);
-    const body = await new Promise<string>((resolve) => {
+    const body = await new Promise<string>((resolve, reject) => {
       const chunks: Buffer[] = [];
+      let totalBytes = 0;
 
       nodeReq.on('data', (chunk: Buffer) => {
+        totalBytes += chunk.length;
+        if (totalBytes > Request.maxBodyBytes) {
+          nodeReq.destroy(new Error('Request body too large'));
+          reject(new Error('Request body too large'));
+          return;
+        }
         chunks.push(chunk);
       });
 
@@ -47,12 +62,12 @@ export class Request {
         resolve(Buffer.concat(chunks).toString('utf-8'));
       });
 
-      nodeReq.on('error', () => {
-        resolve('');
+      nodeReq.on('error', (err) => {
+        reject(err);
       });
     });
 
-    let parsedBody: any = body;
+    let parsedBody: unknown = body;
     if (body.length > 0) {
       try {
         parsedBody = JSON.parse(body);
@@ -75,36 +90,68 @@ export class Request {
     );
   }
 
+  private static cacheKey = Symbol('bushjs_request');
+
   static async fromExpress(expressReq: express.Request): Promise<Request> {
+    const expressAny = expressReq as unknown as Record<string, unknown>;
+
+    const cached = (expressAny as any)[Request.cacheKey] as Request | undefined;
+    if (cached) return cached;
+
+    const session = expressReq.session
+      ? (expressReq.session as unknown as Record<string, unknown>)
+      : undefined;
+
     const request = new Request(
       expressReq.method,
       expressReq.path,
       expressReq.query as Record<string, string>,
       expressReq.body,
       expressReq.headers as Record<string, string | string[]>,
-      (expressReq as any).session,
-      (expressReq as any).user
+      session,
+      expressAny.user as Record<string, unknown> | undefined
     );
-    request.userId = (expressReq as any).userId;
+
+    (request as any).expressRequest = expressReq;
     request.clientIp = expressReq.ip;
-    if ((expressReq as any).token !== undefined) {
-      request.token = (expressReq as any).token;
+    request.params = expressReq.params as Record<string, string>;
+
+    if (typeof expressAny.userId === 'string') {
+      request.userId = expressAny.userId;
     }
-    request.file = (expressReq as any).file;
-    request.files = (expressReq as any).files;
+
+    if (typeof expressAny.token === 'string') {
+      request.token = expressAny.token;
+    }
+
+    if (expressAny.file) {
+      request.file = expressAny.file as Express.Multer.File;
+    }
+
+    if (expressAny.files) {
+      request.files = expressAny.files as Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+    }
+
+    (expressAny as any)[Request.cacheKey] = request;
     return request;
   }
 
-  input(key: string, fallback: any = null): any {
-    return this.body[key] ?? this.query[key] ?? fallback;
+  input(key: string, fallback: unknown = null): unknown {
+    if (typeof this.body === 'object' && this.body !== null) {
+      return (this.body as Record<string, unknown>)[key] ?? this.query[key] ?? fallback;
+    }
+    return this.query[key] ?? fallback;
   }
 
-  all(): Record<string, any> {
-    return { ...this.body, ...this.query };
+  all(): Record<string, unknown> {
+    const body = typeof this.body === 'object' && this.body !== null
+      ? (this.body as Record<string, unknown>)
+      : {};
+    return { ...body, ...this.query };
   }
 
-  only(keys: string[]): Record<string, any> {
-    const result: Record<string, any> = {};
+  only(keys: string[]): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
     keys.forEach(key => {
       result[key] = this.input(key);
     });
@@ -132,6 +179,6 @@ export class Request {
   }
 
   has(key: string): boolean {
-    return this.input(key) !== undefined;
+    return this.input(key) !== undefined && this.input(key) !== null;
   }
 }

@@ -14,9 +14,9 @@ export declare class DataEncryption {
      */
     decrypt(encryptedText: string): string;
     /**
-     * Hash sensitive data (one-way encryption)
+     * SHA-256 hash (one-way, NOT suitable for passwords — use bcrypt for that).
      */
-    hash(text: string, saltRounds?: number): string;
+    sha256(text: string): string;
     /**
      * Generate a secure random token
      */

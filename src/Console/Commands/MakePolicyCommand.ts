@@ -24,7 +24,7 @@ export class MakePolicyCommand extends Command {
     const policyPath = path.resolve(this.app.basePath, config.structure.policies, `${name}Policy.ts`);
     await fs.mkdir(path.dirname(policyPath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let policyStub = await fs.readFile(path.join(stubsPath, 'policy.stub'), 'utf-8');
     policyStub = policyStub.replace(/{{class}}/g, name);
 

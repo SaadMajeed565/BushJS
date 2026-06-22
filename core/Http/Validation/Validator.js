@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FormRequest = exports.Validator = exports.ValidationException = void 0;
-const Validator_1 = require("../../Validation/Validator");
-Object.defineProperty(exports, "ValidationException", { enumerable: true, get: function () { return Validator_1.ValidationException; } });
+const HttpExceptions_1 = require("../../Exceptions/HttpExceptions");
+Object.defineProperty(exports, "ValidationException", { enumerable: true, get: function () { return HttpExceptions_1.ValidationException; } });
 class Validator {
     constructor(data, rules, messages = {}) {
         this.messages = {};
@@ -31,7 +31,6 @@ class Validator {
                 else if (rule === 'confirmed' && value !== this.data[`${field}_confirmation`]) {
                     this.addError(field, rule);
                 }
-                // Add more rules as needed
             }
         }
         return Object.keys(this.errors).length === 0;
@@ -75,7 +74,7 @@ class FormRequest {
         const validator = Validator.make(request.all(), this.rules(), this.messages());
         const passes = await validator.validate();
         if (!passes) {
-            throw new Validator_1.ValidationException(validator.getErrors());
+            throw new HttpExceptions_1.ValidationException(validator.getErrors());
         }
     }
 }

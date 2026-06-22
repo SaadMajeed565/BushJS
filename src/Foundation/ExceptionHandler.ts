@@ -3,6 +3,12 @@ import path from 'path';
 import { Request } from '../Http/Request';
 import { Response } from '../Http/Response';
 import { Storage } from '../Storage/Storage';
+import { HttpException } from '../Exceptions/HttpExceptions';
+import { ValidationException } from '../Exceptions/HttpExceptions';
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 export enum LogLevel {
   DEBUG = 'debug',
@@ -16,7 +22,7 @@ export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stack?: string;
 }
 
@@ -33,28 +39,27 @@ export class Logger {
     this.logLevel = level;
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.INFO, message, context);
   }
 
-  warning(message: string, context?: Record<string, any>): void {
+  warning(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.WARNING, message, context);
   }
 
-  error(message: string, context?: Record<string, any>, stack?: string): void {
+  error(message: string, context?: Record<string, unknown>, stack?: string): void {
     this.log(LogLevel.ERROR, message, context, stack);
   }
 
-  critical(message: string, context?: Record<string, any>, stack?: string): void {
+  critical(message: string, context?: Record<string, unknown>, stack?: string): void {
     this.log(LogLevel.CRITICAL, message, context, stack);
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, any>, stack?: string): void {
-    // Check if level should be logged
+  private log(level: LogLevel, message: string, context?: Record<string, unknown>, stack?: string): void {
     if (!this.shouldLog(level)) return;
 
     const entry: LogEntry = {
@@ -65,11 +70,8 @@ export class Logger {
       stack
     };
 
-    // Console output
     this.logToConsole(entry);
-
-    // File output
-    this.logToFile(entry);
+    this.logToFile(entry).catch((err) => process.stderr.write(`LOG WRITE FAILED: ${err}\n`));
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -81,11 +83,11 @@ export class Logger {
 
   private logToConsole(entry: LogEntry): void {
     const colors: Record<LogLevel, string> = {
-      [LogLevel.DEBUG]: '\x1b[36m', // cyan
-      [LogLevel.INFO]: '\x1b[32m', // green
-      [LogLevel.WARNING]: '\x1b[33m', // yellow
-      [LogLevel.ERROR]: '\x1b[31m', // red
-      [LogLevel.CRITICAL]: '\x1b[35m' // magenta
+      [LogLevel.DEBUG]: '\x1b[36m',
+      [LogLevel.INFO]: '\x1b[32m',
+      [LogLevel.WARNING]: '\x1b[33m',
+      [LogLevel.ERROR]: '\x1b[31m',
+      [LogLevel.CRITICAL]: '\x1b[35m'
     };
 
     const reset = '\x1b[0m';
@@ -113,10 +115,27 @@ export class Logger {
 
       const logLine = JSON.stringify(entry) + '\n';
       await fs.appendFile(filepath, logLine);
-    } catch (error) {
-      console.error('Failed to write log file:', error);
+    } catch {
+      // Silently fail — logging should never crash the app
     }
   }
+}
+
+const STATUS_CODES: Record<number, string> = {
+  400: 'Bad Request',
+  401: 'Unauthenticated',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Method Not Allowed',
+  409: 'Conflict',
+  422: 'Validation Failed',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  503: 'Service Unavailable',
+};
+
+function getStatusText(code: number): string {
+  return STATUS_CODES[code] ?? 'Error';
 }
 
 export class ExceptionHandler {
@@ -126,55 +145,69 @@ export class ExceptionHandler {
     this.logger = logger || new Logger();
   }
 
-  handle(error: any, request: Request, response: Response): void {
-    // Log the error
+  handle(error: unknown, request: Request, response: Response): void {
+    const statusCode = error instanceof HttpException
+      ? error.statusCode
+      : (error as Record<string, unknown>)?.statusCode as number ?? 500;
+
+    const message = error instanceof Error
+      ? error.message
+      : 'An error occurred';
+
+    const errorName = error instanceof Error
+      ? error.name
+      : 'UnknownError';
+
+    const errors = error instanceof ValidationException
+      ? error.errors
+      : (error as Record<string, unknown>)?.errors as Record<string, string[]> | undefined;
+
     this.logger.error(
-      error.message || 'An error occurred',
+      `${errorName}: ${message}`,
       {
+        statusCode,
         url: request.url(),
         method: request.method,
         ip: request.ip(),
         userAgent: request.header('user-agent')
       },
-      error.stack
+      error instanceof Error ? error.stack : undefined
     );
 
-    // Determine status code
-    const statusCode = error.status || error.statusCode || 500;
-    const isClientError = statusCode >= 400 && statusCode < 500;
-    const isServerError = statusCode >= 500;
-
-    // Build response
-    const responseData: Record<string, any> = {
-      message: error.message || 'An error occurred',
-      status: statusCode
+    const responsePayload: Record<string, unknown> = {
+      message: statusCode >= 500 && process.env.NODE_ENV === 'production'
+        ? getStatusText(statusCode)
+        : message,
+      status: statusCode,
     };
 
-    // Add errors if validation failed
-    if (error.errors) {
-      responseData.errors = error.errors;
+    if (errors && Object.keys(errors).length > 0) {
+      responsePayload.errors = errors;
     }
 
-    // Add debug info in development
-    if (process.env.NODE_ENV === 'development') {
-      responseData.debug = {
-        file: error.file,
-        line: error.line,
-        stack: error.stack?.split('\n')
+    if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+      responsePayload.debug = {
+        type: error.name,
+        stack: error.stack?.split('\n').map(l => l.trim()),
       };
     }
 
-    response.status(statusCode).json(responseData);
+    response.status(statusCode).json(responsePayload);
   }
 
-  // Render error page for browser requests
-  renderError(error: any, request: Request, response: Response): void {
-    const statusCode = error.status || error.statusCode || 500;
-    const isDevelopment = process.env.NODE_ENV === 'development';
+  renderError(error: unknown, request: Request, response: Response): void {
+    const statusCode = error instanceof HttpException
+      ? error.statusCode
+      : (error as Record<string, unknown>)?.statusCode as number ?? 500;
+
+    const isDevelopment = process.env.NODE_ENV !== 'production';
 
     if (this.wantJson(request)) {
       return this.handle(error, request, response);
     }
+
+    const message = error instanceof Error ? error.message : 'An error occurred';
+    const stack = error instanceof Error ? error.stack : undefined;
 
     const html = `
       <!DOCTYPE html>
@@ -182,7 +215,7 @@ export class ExceptionHandler {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>${statusCode} Error</title>
+          <title>${statusCode} - ${getStatusText(statusCode)}</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -207,6 +240,13 @@ export class ExceptionHandler {
               font-size: 48px;
               margin: 0 0 10px 0;
               color: #667eea;
+            }
+            .status-text {
+              font-size: 14px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+              margin-bottom: 5px;
             }
             .message {
               font-size: 18px;
@@ -235,12 +275,13 @@ export class ExceptionHandler {
         </head>
         <body>
           <div class="container">
+            <div class="status-text">${getStatusText(statusCode)}</div>
             <h1>${statusCode}</h1>
-            <div class="message">${error.message}</div>
-            ${isDevelopment ? `
+            <div class="message">${isDevelopment ? escapeHtml(message) : getStatusText(statusCode)}</div>
+            ${isDevelopment && stack ? `
               <div class="debug">
                 <div class="debug-title">Debug Information:</div>
-                <pre>${error.stack}</pre>
+                <pre>${escapeHtml(stack)}</pre>
               </div>
             ` : ''}
           </div>
@@ -257,6 +298,5 @@ export class ExceptionHandler {
   }
 }
 
-// Global error handler
 export const logger = new Logger();
 export const exceptionHandler = new ExceptionHandler(logger);

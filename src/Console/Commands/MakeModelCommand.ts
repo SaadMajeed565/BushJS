@@ -24,7 +24,7 @@ export class MakeModelCommand extends Command {
     const modelPath = path.resolve(this.app.basePath, config.structure.models, `${name}.ts`);
     await fs.mkdir(path.dirname(modelPath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let modelStub = await fs.readFile(path.join(stubsPath, 'model.stub'), 'utf-8');
     const tableName = name.toLowerCase() + 's'; // Simple pluralization
     modelStub = modelStub.replace(/{{class}}/g, name).replace(/{{table}}/g, tableName);

@@ -1,10 +1,15 @@
 import { Request } from './Request';
+import { Response } from './Response';
+
+type RouteHandler = (req: Request, res: Response) => void | Promise<void>;
+type RouteAction = RouteHandler | [new (...args: any[]) => any, string];
+type MiddlewareItem = RouteHandler | { handle: RouteHandler } | { new (...args: any[]): { handle: RouteHandler } } | string;
 
 type RouteDefinition = {
   method: string;
   path: string;
-  action: any;
-  middleware: any[];
+  action: RouteAction;
+  middleware: MiddlewareItem[];
   regex: RegExp;
   params: string[];
   name?: string;
@@ -12,17 +17,17 @@ type RouteDefinition = {
 
 type RouteGroup = {
   prefix?: string;
-  middleware?: any[];
+  middleware?: MiddlewareItem[];
   name?: string;
 };
 
 export class Router {
   private routes = new Map<string, RouteDefinition[]>();
   private groups: RouteGroup[] = [];
-  private middlewareGroups: Map<string, any[]> = new Map();
+  private middlewareGroups: Map<string, MiddlewareItem[]> = new Map();
   private namedRoutes: Map<string, RouteDefinition> = new Map();
 
-  register(method: string, path: string, action: any, middleware: any[] = []): void {
+  register(method: string, path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     const routeMethod = method.toUpperCase();
     const fullPath = this.buildPath(path);
     const resolvedMiddleware = this.resolveMiddleware(middleware);
@@ -42,27 +47,27 @@ export class Router {
     this.routes.set(routeMethod, existing);
   }
 
-  get(path: string, action: any, middleware: any[] = []): void {
+  get(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('GET', path, action, middleware);
   }
 
-  post(path: string, action: any, middleware: any[] = []): void {
+  post(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('POST', path, action, middleware);
   }
 
-  put(path: string, action: any, middleware: any[] = []): void {
+  put(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('PUT', path, action, middleware);
   }
 
-  patch(path: string, action: any, middleware: any[] = []): void {
+  patch(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('PATCH', path, action, middleware);
   }
 
-  delete(path: string, action: any, middleware: any[] = []): void {
+  delete(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('DELETE', path, action, middleware);
   }
 
-  any(path: string, action: any, middleware: any[] = []): void {
+  any(path: string, action: RouteAction, middleware: MiddlewareItem[] = []): void {
     this.register('ANY', path, action, middleware);
   }
 
@@ -72,22 +77,13 @@ export class Router {
     this.groups.pop();
   }
 
-  middlewareGroup(name: string, middleware: any[]): void {
+  middlewareGroup(name: string, middleware: MiddlewareItem[]): void {
     this.middlewareGroups.set(name, middleware);
   }
 
-  resource(path: string, controller: any, options: { only?: string[], except?: string[], middleware?: any[] } = {}): void {
-    const actions = {
-      index: 'GET',
-      create: 'GET',
-      store: 'POST',
-      show: 'GET',
-      edit: 'GET',
-      update: 'PUT',
-      destroy: 'DELETE',
-    };
-
-    const routes = [
+  resource(path: string, controller: any, options: { only?: string[], except?: string[], middleware?: MiddlewareItem[] } = {}): void {
+    const actions = ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'] as const;
+    const routes: { name: string; method: string; path: string; action: string }[] = [
       { name: 'index', method: 'GET', path: '', action: 'index' },
       { name: 'create', method: 'GET', path: '/create', action: 'create' },
       { name: 'store', method: 'POST', path: '', action: 'store' },
@@ -97,7 +93,7 @@ export class Router {
       { name: 'destroy', method: 'DELETE', path: '/:id', action: 'destroy' },
     ];
 
-    const only = options.only || Object.keys(actions);
+    const only = options.only || [...actions];
     const except = options.except || [];
     const middleware = options.middleware || [];
 
@@ -108,8 +104,8 @@ export class Router {
     });
   }
 
-  apiResource(path: string, controller: any, options: { only?: string[], except?: string[], middleware?: any[] } = {}): void {
-    const routes = [
+  apiResource(path: string, controller: any, options: { only?: string[], except?: string[], middleware?: MiddlewareItem[] } = {}): void {
+    const routes: { name: string; method: string; path: string; action: string }[] = [
       { name: 'index', method: 'GET', path: '', action: 'index' },
       { name: 'store', method: 'POST', path: '', action: 'store' },
       { name: 'show', method: 'GET', path: '/:id', action: 'show' },
@@ -129,8 +125,6 @@ export class Router {
   }
 
   name(name: string): Router {
-    // This would be called after registering a route
-    // For simplicity, we'll assume the last registered route
     const lastRoute = this.getLastRoute();
     if (lastRoute) {
       lastRoute.name = name;
@@ -153,27 +147,29 @@ export class Router {
   }
 
   private buildPath(path: string): string {
-    let fullPath = path;
+    let prefix = '';
     this.groups.forEach(group => {
       if (group.prefix) {
-        fullPath = group.prefix + fullPath;
+        const p = group.prefix.endsWith('/') ? group.prefix.slice(0, -1) : group.prefix;
+        prefix += p;
       }
     });
-    return fullPath;
+    const route = path.startsWith('/') ? path : '/' + path;
+    return prefix + route;
   }
 
-  private getGroupMiddleware(): any[] {
-    let middleware: any[] = [];
+  private getGroupMiddleware(): MiddlewareItem[] {
+    let middleware: MiddlewareItem[] = [];
     this.groups.forEach(group => {
       if (group.middleware) {
-        middleware = [...middleware, ...this.resolveMiddleware(group.middleware)];
+        middleware = [...middleware, ...this.resolveMiddleware(group.middleware!)];
       }
     });
     return middleware;
   }
 
-  private resolveMiddleware(middleware: any[]): any[] {
-    const resolved: any[] = [];
+  private resolveMiddleware(middleware: MiddlewareItem[]): MiddlewareItem[] {
+    const resolved: MiddlewareItem[] = [];
     middleware.forEach(mw => {
       if (typeof mw === 'string') {
         const group = this.middlewareGroups.get(mw);

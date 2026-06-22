@@ -4,10 +4,11 @@ import { Container } from '../Container/Container';
 import { Router } from '../Http/Router';
 import { HttpKernel } from '../Http/Kernel';
 import { ConsoleKernel } from '../Console/Kernel';
-import { Connection } from '../Database/Connection';
+import { Connection, setDefaultConnection } from '../Database/Connection';
 import { setupGracefulShutdown } from './GracefulShutdown';
 import { config } from '../Config/Config';
 import { Storage } from '../Storage/Storage';
+import { gate } from '../Auth/Gate';
 
 export interface ApplicationOptions {
   basePath?: string;
@@ -45,6 +46,7 @@ export class Application {
     this.container = new Container();
     this.router = new Router();
     this.database = new Connection(options.databaseUrl);
+    setDefaultConnection(this.database);
     this.httpKernel = new HttpKernel(this);
     this.consoleKernel = new ConsoleKernel(this);
     this.registerBaseBindings();
@@ -68,7 +70,7 @@ export class Application {
       }
       return m;
     });
-    this.container.singleton('gate', () => require('../Auth/Gate').gate);
+    this.container.singleton('gate', () => gate);
   }
 
   basePathTo(pathSegment: string): string {

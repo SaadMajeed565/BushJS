@@ -45,7 +45,7 @@ export class MakeSeederCommand extends Command {
     await fs.mkdir(seedersPath, { recursive: true });
 
     const className = `${toPascalCase(name)}Seeder`;
-    const stubPath = path.resolve(__dirname, '../stubs/seeder.stub');
+    const stubPath = path.join(this.app.basePath, 'src', 'stubs', 'seeder.stub');
     let stub = await fs.readFile(stubPath, 'utf-8');
     stub = stub.replace(/{{class}}/g, className);
 

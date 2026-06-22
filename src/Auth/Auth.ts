@@ -25,12 +25,14 @@ export class SessionGuard implements Guard, ProviderAware {
   }
 
   async check(request: Request): Promise<boolean> {
-    return !!request.session?.userId;
+    const session = request.session as Record<string, unknown> | undefined;
+    return !!session?.userId;
   }
 
   async user(request: Request): Promise<AuthUser | null> {
-    if (request.user) {
-      return request.user;
+    const reqAny = request as unknown as { user: AuthUser | null };
+    if (reqAny.user) {
+      return reqAny.user;
     }
 
     const userId = this.id(request);
@@ -52,12 +54,13 @@ export class SessionGuard implements Guard, ProviderAware {
       id: userRecord._id?.toString?.() ?? userRecord.id,
     };
 
-    request.user = authUser;
+    reqAny.user = authUser;
     return authUser;
   }
 
   id(request: Request): string | null {
-    return request.session?.userId || null;
+    const session = request.session as Record<string, unknown> | undefined;
+    return (session?.userId as string) || null;
   }
 
   async validate(credentials: Record<string, any>): Promise<AuthUser | null> {
@@ -90,15 +93,17 @@ export class SessionGuard implements Guard, ProviderAware {
       throw new Error('Session middleware is required for login.');
     }
 
-    request.session.userId = user.id;
-    request.user = user;
+    const session = request.session as Record<string, unknown>;
+    session.userId = user.id;
+    (request as unknown as { user: AuthUser | null }).user = user;
   }
 
   logout(request: Request): void {
     if (request.session) {
-      delete request.session.userId;
+      const session = request.session as Record<string, unknown>;
+      delete session.userId;
     }
-    request.user = null;
+    (request as unknown as { user: AuthUser | null }).user = null;
   }
 }
 
@@ -117,7 +122,7 @@ export class TokenGuard implements Guard, ProviderAware {
     }
 
     try {
-      const payload = jwt.verify(token, this.secret) as any;
+      const payload = jwt.verify(token, this.secret, { algorithms: ['HS256'] }) as any;
       request.userId = payload.sub;
       return true;
     } catch {
@@ -126,8 +131,9 @@ export class TokenGuard implements Guard, ProviderAware {
   }
 
   async user(request: Request): Promise<AuthUser | null> {
-    if (request.user) {
-      return request.user;
+    const reqAny = request as unknown as { user: AuthUser | null };
+    if (reqAny.user) {
+      return reqAny.user;
     }
 
     const userId = this.id(request);
@@ -149,7 +155,7 @@ export class TokenGuard implements Guard, ProviderAware {
       id: userRecord._id?.toString?.() ?? userRecord.id,
     };
 
-    request.user = authUser;
+    reqAny.user = authUser;
     return authUser;
   }
 
@@ -164,7 +170,7 @@ export class TokenGuard implements Guard, ProviderAware {
     }
 
     try {
-      const payload = jwt.verify(token, this.secret) as any;
+      const payload = jwt.verify(token, this.secret, { algorithms: ['HS256'] }) as any;
       return payload.sub;
     } catch {
       return null;
@@ -202,12 +208,11 @@ export class TokenGuard implements Guard, ProviderAware {
     if (user.name) payload.name = user.name;
 
     request.token = jwt.sign(payload, this.secret, { expiresIn: '7d' });
-    request.user = user;
+    (request as unknown as { user: AuthUser | null }).user = user;
   }
 
   logout(request: Request): void {
-    // For token auth, logout is handled client-side by discarding the token
-    request.user = null;
+    (request as unknown as { user: AuthUser | null }).user = null;
     request.token = undefined;
   }
 
@@ -223,18 +228,9 @@ export class TokenGuard implements Guard, ProviderAware {
       const t = authHeader.slice(7).trim();
       return t.length > 0 ? t : null;
     }
-    const q = request.query?.token;
-    if (q && typeof q === 'string' && q.trim().length > 0) {
-      const t = q.trim();
-      return t.startsWith('Bearer ') ? t.slice(7).trim() : t;
-    }
     return null;
   }
 
-  /**
-   * Verify a JWT string and load the user via the registered provider (same rules as the API guard).
-   * Use for WebSocket in-band auth or any non-HTTP bearer context.
-   */
   async userFromTokenString(rawToken: string | null | undefined): Promise<AuthUser | null> {
     if (!rawToken?.trim()) {
       return null;
@@ -250,7 +246,7 @@ export class TokenGuard implements Guard, ProviderAware {
 
     let userId: string;
     try {
-      const payload = jwt.verify(token, this.secret) as { sub?: string };
+      const payload = jwt.verify(token, this.secret, { algorithms: ['HS256'] }) as { sub?: string };
       if (!payload?.sub) {
         return null;
       }
@@ -294,7 +290,11 @@ export class Auth {
   }
 
   guard(name = 'web'): Guard {
-    return this.guards.get(name) || new SessionGuard();
+    const guard = this.guards.get(name);
+    if (!guard) {
+      throw new Error(`Guard "${name}" is not registered.`);
+    }
+    return guard;
   }
 
   check(request: Request, name = 'web'): Promise<boolean> {
@@ -305,10 +305,6 @@ export class Auth {
     return this.guard(name).user(request);
   }
 
-  /**
-   * Resolve a user from a raw JWT (e.g. WebSocket JSON `{ type: "auth", token }`).
-   * Only supported for the **`api`** (token) guard; other guards return null.
-   */
   async userFromToken(token: string | null | undefined, guardName = 'api'): Promise<AuthUser | null> {
     const guard = this.guard(guardName);
     if (guard instanceof TokenGuard) {

@@ -32,11 +32,8 @@ export class ApiResponse {
     this.success(data, message, 201);
   }
 
-  noContent(message = 'No content'): void {
-    this.response.status(204).json({
-      success: true,
-      message,
-    });
+  noContent(): void {
+    this.response.status(204).send();
   }
 
   paginate(data: any[], total: number, page: number, perPage: number, message = 'Data retrieved successfully'): void {

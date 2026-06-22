@@ -13,11 +13,6 @@ import { MakeRouteCommand } from './Commands/MakeRouteCommand';
 import { SeedCommand } from './Commands/SeedCommand';
 import { SchemaCommand } from './Commands/SchemaCommand';
 import { MigrateCommand } from './Commands/MigrateCommand';
-import { MonitorHealthCommand } from './Commands/MonitorHealthCommand';
-import { MonitorMetricsCommand } from './Commands/MonitorMetricsCommand';
-import { BackupCreateCommand } from './Commands/BackupCreateCommand';
-import { BackupListCommand } from './Commands/BackupListCommand';
-import { BackupCleanupCommand } from './Commands/BackupCleanupCommand';
 import { HelpCommand } from './Commands/HelpCommand';
 
 export class ConsoleKernel {
@@ -47,11 +42,6 @@ export class ConsoleKernel {
     this.register(new SeedCommand(this.app));
     this.register(new SchemaCommand(this.app));
     this.register(new MigrateCommand(this.app));
-    this.register(new MonitorHealthCommand(this.app));
-    this.register(new MonitorMetricsCommand(this.app));
-    this.register(new BackupCreateCommand(this.app));
-    this.register(new BackupListCommand(this.app));
-    this.register(new BackupCleanupCommand(this.app));
     this.register(new HelpCommand(() => this.showHelp()));
   }
 
@@ -73,8 +63,6 @@ export class ConsoleKernel {
       { title: 'General', matcher: (signature) => signature === 'help' },
       { title: 'Generators', matcher: (signature) => signature.startsWith('make:') },
       { title: 'Database', matcher: (signature) => signature === 'schema' || signature === 'seed' || signature === 'migrate' },
-      { title: 'Monitoring', matcher: (signature) => signature.startsWith('monitor:') },
-      { title: 'Backups', matcher: (signature) => signature.startsWith('backup:') },
     ];
 
     const commands = Array.from(this.commands.values());

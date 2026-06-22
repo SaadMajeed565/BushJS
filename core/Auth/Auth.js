@@ -12,11 +12,13 @@ class SessionGuard {
         this.provider = provider;
     }
     async check(request) {
-        return !!request.session?.userId;
+        const session = request.session;
+        return !!session?.userId;
     }
     async user(request) {
-        if (request.user) {
-            return request.user;
+        const reqAny = request;
+        if (reqAny.user) {
+            return reqAny.user;
         }
         const userId = this.id(request);
         if (!userId) {
@@ -33,11 +35,12 @@ class SessionGuard {
             ...userRecord,
             id: userRecord._id?.toString?.() ?? userRecord.id,
         };
-        request.user = authUser;
+        reqAny.user = authUser;
         return authUser;
     }
     id(request) {
-        return request.session?.userId || null;
+        const session = request.session;
+        return session?.userId || null;
     }
     async validate(credentials) {
         if (!this.provider) {
@@ -63,12 +66,14 @@ class SessionGuard {
         if (!request.session) {
             throw new Error('Session middleware is required for login.');
         }
-        request.session.userId = user.id;
+        const session = request.session;
+        session.userId = user.id;
         request.user = user;
     }
     logout(request) {
         if (request.session) {
-            delete request.session.userId;
+            const session = request.session;
+            delete session.userId;
         }
         request.user = null;
     }
@@ -87,7 +92,7 @@ class TokenGuard {
             return false;
         }
         try {
-            const payload = jsonwebtoken_1.default.verify(token, this.secret);
+            const payload = jsonwebtoken_1.default.verify(token, this.secret, { algorithms: ['HS256'] });
             request.userId = payload.sub;
             return true;
         }
@@ -96,8 +101,9 @@ class TokenGuard {
         }
     }
     async user(request) {
-        if (request.user) {
-            return request.user;
+        const reqAny = request;
+        if (reqAny.user) {
+            return reqAny.user;
         }
         const userId = this.id(request);
         if (!userId) {
@@ -114,7 +120,7 @@ class TokenGuard {
             ...userRecord,
             id: userRecord._id?.toString?.() ?? userRecord.id,
         };
-        request.user = authUser;
+        reqAny.user = authUser;
         return authUser;
     }
     id(request) {
@@ -126,7 +132,7 @@ class TokenGuard {
             return null;
         }
         try {
-            const payload = jsonwebtoken_1.default.verify(token, this.secret);
+            const payload = jsonwebtoken_1.default.verify(token, this.secret, { algorithms: ['HS256'] });
             return payload.sub;
         }
         catch {
@@ -163,7 +169,6 @@ class TokenGuard {
         request.user = user;
     }
     logout(request) {
-        // For token auth, logout is handled client-side by discarding the token
         request.user = null;
         request.token = undefined;
     }
@@ -178,17 +183,8 @@ class TokenGuard {
             const t = authHeader.slice(7).trim();
             return t.length > 0 ? t : null;
         }
-        const q = request.query?.token;
-        if (q && typeof q === 'string' && q.trim().length > 0) {
-            const t = q.trim();
-            return t.startsWith('Bearer ') ? t.slice(7).trim() : t;
-        }
         return null;
     }
-    /**
-     * Verify a JWT string and load the user via the registered provider (same rules as the API guard).
-     * Use for WebSocket in-band auth or any non-HTTP bearer context.
-     */
     async userFromTokenString(rawToken) {
         if (!rawToken?.trim()) {
             return null;
@@ -202,7 +198,7 @@ class TokenGuard {
         }
         let userId;
         try {
-            const payload = jsonwebtoken_1.default.verify(token, this.secret);
+            const payload = jsonwebtoken_1.default.verify(token, this.secret, { algorithms: ['HS256'] });
             if (!payload?.sub) {
                 return null;
             }
@@ -243,7 +239,11 @@ class Auth {
         return this;
     }
     guard(name = 'web') {
-        return this.guards.get(name) || new SessionGuard();
+        const guard = this.guards.get(name);
+        if (!guard) {
+            throw new Error(`Guard "${name}" is not registered.`);
+        }
+        return guard;
     }
     check(request, name = 'web') {
         return Promise.resolve(this.guard(name).check(request));
@@ -251,10 +251,6 @@ class Auth {
     user(request, name = 'web') {
         return this.guard(name).user(request);
     }
-    /**
-     * Resolve a user from a raw JWT (e.g. WebSocket JSON `{ type: "auth", token }`).
-     * Only supported for the **`api`** (token) guard; other guards return null.
-     */
     async userFromToken(token, guardName = 'api') {
         const guard = this.guard(guardName);
         if (guard instanceof TokenGuard) {

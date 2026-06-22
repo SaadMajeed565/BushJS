@@ -24,7 +24,7 @@ export class MakeCommandCommand extends Command {
     const commandPath = path.resolve(this.app.basePath, config.structure.commands, `${name}Command.ts`);
     await fs.mkdir(path.dirname(commandPath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let commandStub = await fs.readFile(path.join(stubsPath, 'command.stub'), 'utf-8');
     commandStub = commandStub.replace(/{{class}}/g, name);
 

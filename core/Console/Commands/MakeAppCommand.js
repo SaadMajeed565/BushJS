@@ -20,36 +20,13 @@ class MakeAppCommand extends Command_1.Command {
         await promises_1.default.mkdir(path_1.default.join(targetPath, 'Http', 'Controllers'), { recursive: true });
         await promises_1.default.mkdir(path_1.default.join(targetPath, 'Models'), { recursive: true });
         await promises_1.default.mkdir(path_1.default.join(targetPath, 'routes'), { recursive: true });
-        const stubsPath = path_1.default.resolve(__dirname, '../stubs');
-        // Controller
+        const stubsPath = path_1.default.join(this.app.basePath, 'src', 'stubs');
         let controllerStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'controller.stub'), 'utf-8');
         controllerStub = controllerStub.replace(/{{class}}/g, 'WelcomeController');
         await promises_1.default.writeFile(path_1.default.join(targetPath, 'Http', 'Controllers', 'WelcomeController.ts'), controllerStub);
-        // Model
-        await promises_1.default.writeFile(path_1.default.join(targetPath, 'Models', 'User.ts'), `import { Model } from '@framework/Database/Model';
-import mongoose, { Schema } from 'mongoose';
-
-export class User extends Model {
-  static collection = 'users';
-
-  static initialize(): void {
-    this.schema = new Schema({
-      name: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      password: { type: String, required: true },
-      created_at: { type: Date, default: Date.now },
-      updated_at: { type: Date, default: Date.now }
-    });
-
-    super.initialize();
-  }
-
-  static async findByEmail(email: string): Promise<any> {
-    return await this.where('email', email).first();
-  }
-}
-`);
-        // Route
+        let modelStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'model.stub'), 'utf-8');
+        modelStub = modelStub.replace(/{{class}}/g, 'User').replace(/{{table}}/g, 'users');
+        await promises_1.default.writeFile(path_1.default.join(targetPath, 'Models', 'User.ts'), modelStub);
         const routeStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'route.stub'), 'utf-8');
         await promises_1.default.writeFile(path_1.default.join(targetPath, 'routes', 'api.ts'), routeStub);
         console.log(`Application scaffold created at ${targetPath}`);

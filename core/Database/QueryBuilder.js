@@ -5,17 +5,21 @@ class QueryBuilder {
     constructor(model) {
         this.model = model;
         this.conditions = {};
+        this.hasConditions = false;
     }
     where(column, value) {
         this.conditions[column] = value;
+        this.hasConditions = true;
         return this;
     }
     whereIn(column, values) {
         this.conditions[column] = { $in: values };
+        this.hasConditions = true;
         return this;
     }
     whereNotIn(column, values) {
         this.conditions[column] = { $nin: values };
+        this.hasConditions = true;
         return this;
     }
     limit(limit) {
@@ -55,9 +59,15 @@ class QueryBuilder {
         return count > 0;
     }
     async delete() {
+        if (!this.hasConditions) {
+            throw new Error('Cannot delete without at least one where clause. Call where() first.');
+        }
         return await this.model.deleteMany(this.conditions);
     }
     async update(data) {
+        if (!this.hasConditions) {
+            throw new Error('Cannot update without at least one where clause. Call where() first.');
+        }
         return await this.model.updateMany(this.conditions, data);
     }
 }

@@ -24,11 +24,24 @@ class Container {
             throw new Error(`Container entry [${key}] not found.`);
         }
         const concrete = binding.concrete;
-        const result = typeof concrete === 'function' ? concrete(this) : concrete;
+        const result = typeof concrete === 'function'
+            ? concrete(this)
+            : concrete;
         if (binding.singleton) {
             this.instances.set(key, result);
         }
         return result;
+    }
+    has(key) {
+        return this.bindings.has(key) || this.instances.has(key);
+    }
+    forget(key) {
+        this.bindings.delete(key);
+        this.instances.delete(key);
+    }
+    flush() {
+        this.bindings.clear();
+        this.instances.clear();
     }
 }
 exports.Container = Container;

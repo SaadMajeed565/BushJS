@@ -3,14 +3,14 @@ import express from 'express';
 
 export class Response {
   private serverResponse?: ServerResponse;
-  private expressResponse?: express.Response;
+  readonly expressResponse?: express.Response;
   private sent = false;
 
   constructor(response: ServerResponse | express.Response) {
-    if (response && 'setHeader' in response && 'end' in response) {
-      this.serverResponse = response as ServerResponse;
-    } else {
+    if ('set' in response) {
       this.expressResponse = response as express.Response;
+    } else {
+      this.serverResponse = response as ServerResponse;
     }
   }
 
@@ -32,7 +32,7 @@ export class Response {
     return this;
   }
 
-  send(body: any): void {
+  send(body?: any): void {
     if (this.sent) {
       return;
     }
@@ -42,6 +42,10 @@ export class Response {
     if (this.expressResponse) {
       this.expressResponse.send(body);
     } else if (this.serverResponse) {
+      if (body === undefined) {
+        this.serverResponse.end();
+        return;
+      }
       if (typeof body === 'object') {
         this.header('Content-Type', 'application/json');
         this.serverResponse.end(JSON.stringify(body, null, 2));
@@ -84,7 +88,11 @@ export class Response {
       this.expressResponse.cookie(name, value, options);
     } else if (this.serverResponse) {
       const cookieStr = this.buildCookieString(name, value, options);
-      this.serverResponse.setHeader('Set-Cookie', cookieStr);
+      const existing = this.serverResponse.getHeader('Set-Cookie');
+      const cookies = existing
+        ? (Array.isArray(existing) ? existing as string[] : [String(existing)]).concat(cookieStr)
+        : [cookieStr];
+      this.serverResponse.setHeader('Set-Cookie', cookies);
     }
     return this;
   }

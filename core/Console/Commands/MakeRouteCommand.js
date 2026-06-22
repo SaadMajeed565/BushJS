@@ -7,11 +7,12 @@ exports.MakeRouteCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
 class MakeRouteCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:route';
-        this.description = 'Create a new route registration file.';
+        this.description = 'Create a new route registration file in the configured routes directory.';
         this.app = app;
     }
     async handle(args) {
@@ -20,9 +21,9 @@ class MakeRouteCommand extends Command_1.Command {
             console.log('Please provide a route file name.');
             return;
         }
-        const routePath = path_1.default.resolve(this.app.basePath, 'routes', `${name}.ts`);
+        const routePath = path_1.default.resolve(this.app.basePath, Config_1.config.structure.routes, `${name}.ts`);
         await promises_1.default.mkdir(path_1.default.dirname(routePath), { recursive: true });
-        const stubsPath = path_1.default.resolve(__dirname, '../stubs');
+        const stubsPath = path_1.default.join(this.app.basePath, 'src', 'stubs');
         let routeStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'route.stub'), 'utf-8');
         await promises_1.default.writeFile(routePath, routeStub);
         console.log(`Route file created at ${routePath}`);

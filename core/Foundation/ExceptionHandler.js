@@ -7,6 +7,11 @@ exports.exceptionHandler = exports.logger = exports.ExceptionHandler = exports.L
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Storage_1 = require("../Storage/Storage");
+const HttpExceptions_1 = require("../Exceptions/HttpExceptions");
+const HttpExceptions_2 = require("../Exceptions/HttpExceptions");
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 var LogLevel;
 (function (LogLevel) {
     LogLevel["DEBUG"] = "debug";
@@ -42,7 +47,6 @@ class Logger {
         this.log(LogLevel.CRITICAL, message, context, stack);
     }
     log(level, message, context, stack) {
-        // Check if level should be logged
         if (!this.shouldLog(level))
             return;
         const entry = {
@@ -52,10 +56,8 @@ class Logger {
             context,
             stack
         };
-        // Console output
         this.logToConsole(entry);
-        // File output
-        this.logToFile(entry);
+        this.logToFile(entry).catch((err) => process.stderr.write(`LOG WRITE FAILED: ${err}\n`));
     }
     shouldLog(level) {
         const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.ERROR, LogLevel.CRITICAL];
@@ -65,11 +67,11 @@ class Logger {
     }
     logToConsole(entry) {
         const colors = {
-            [LogLevel.DEBUG]: '\x1b[36m', // cyan
-            [LogLevel.INFO]: '\x1b[32m', // green
-            [LogLevel.WARNING]: '\x1b[33m', // yellow
-            [LogLevel.ERROR]: '\x1b[31m', // red
-            [LogLevel.CRITICAL]: '\x1b[35m' // magenta
+            [LogLevel.DEBUG]: '\x1b[36m',
+            [LogLevel.INFO]: '\x1b[32m',
+            [LogLevel.WARNING]: '\x1b[33m',
+            [LogLevel.ERROR]: '\x1b[31m',
+            [LogLevel.CRITICAL]: '\x1b[35m'
         };
         const reset = '\x1b[0m';
         const color = colors[entry.level];
@@ -88,61 +90,85 @@ class Logger {
             const logLine = JSON.stringify(entry) + '\n';
             await promises_1.default.appendFile(filepath, logLine);
         }
-        catch (error) {
-            console.error('Failed to write log file:', error);
+        catch {
+            // Silently fail — logging should never crash the app
         }
     }
 }
 exports.Logger = Logger;
+const STATUS_CODES = {
+    400: 'Bad Request',
+    401: 'Unauthenticated',
+    403: 'Forbidden',
+    404: 'Not Found',
+    405: 'Method Not Allowed',
+    409: 'Conflict',
+    422: 'Validation Failed',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    503: 'Service Unavailable',
+};
+function getStatusText(code) {
+    return STATUS_CODES[code] ?? 'Error';
+}
 class ExceptionHandler {
     constructor(logger) {
         this.logger = logger || new Logger();
     }
     handle(error, request, response) {
-        // Log the error
-        this.logger.error(error.message || 'An error occurred', {
+        const statusCode = error instanceof HttpExceptions_1.HttpException
+            ? error.statusCode
+            : error?.statusCode ?? 500;
+        const message = error instanceof Error
+            ? error.message
+            : 'An error occurred';
+        const errorName = error instanceof Error
+            ? error.name
+            : 'UnknownError';
+        const errors = error instanceof HttpExceptions_2.ValidationException
+            ? error.errors
+            : error?.errors;
+        this.logger.error(`${errorName}: ${message}`, {
+            statusCode,
             url: request.url(),
             method: request.method,
             ip: request.ip(),
             userAgent: request.header('user-agent')
-        }, error.stack);
-        // Determine status code
-        const statusCode = error.status || error.statusCode || 500;
-        const isClientError = statusCode >= 400 && statusCode < 500;
-        const isServerError = statusCode >= 500;
-        // Build response
-        const responseData = {
-            message: error.message || 'An error occurred',
-            status: statusCode
+        }, error instanceof Error ? error.stack : undefined);
+        const responsePayload = {
+            message: statusCode >= 500 && process.env.NODE_ENV === 'production'
+                ? getStatusText(statusCode)
+                : message,
+            status: statusCode,
         };
-        // Add errors if validation failed
-        if (error.errors) {
-            responseData.errors = error.errors;
+        if (errors && Object.keys(errors).length > 0) {
+            responsePayload.errors = errors;
         }
-        // Add debug info in development
-        if (process.env.NODE_ENV === 'development') {
-            responseData.debug = {
-                file: error.file,
-                line: error.line,
-                stack: error.stack?.split('\n')
+        if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+            responsePayload.debug = {
+                type: error.name,
+                stack: error.stack?.split('\n').map(l => l.trim()),
             };
         }
-        response.status(statusCode).json(responseData);
+        response.status(statusCode).json(responsePayload);
     }
-    // Render error page for browser requests
     renderError(error, request, response) {
-        const statusCode = error.status || error.statusCode || 500;
-        const isDevelopment = process.env.NODE_ENV === 'development';
+        const statusCode = error instanceof HttpExceptions_1.HttpException
+            ? error.statusCode
+            : error?.statusCode ?? 500;
+        const isDevelopment = process.env.NODE_ENV !== 'production';
         if (this.wantJson(request)) {
             return this.handle(error, request, response);
         }
+        const message = error instanceof Error ? error.message : 'An error occurred';
+        const stack = error instanceof Error ? error.stack : undefined;
         const html = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>${statusCode} Error</title>
+          <title>${statusCode} - ${getStatusText(statusCode)}</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -167,6 +193,13 @@ class ExceptionHandler {
               font-size: 48px;
               margin: 0 0 10px 0;
               color: #667eea;
+            }
+            .status-text {
+              font-size: 14px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+              margin-bottom: 5px;
             }
             .message {
               font-size: 18px;
@@ -195,12 +228,13 @@ class ExceptionHandler {
         </head>
         <body>
           <div class="container">
+            <div class="status-text">${getStatusText(statusCode)}</div>
             <h1>${statusCode}</h1>
-            <div class="message">${error.message}</div>
-            ${isDevelopment ? `
+            <div class="message">${isDevelopment ? escapeHtml(message) : getStatusText(statusCode)}</div>
+            ${isDevelopment && stack ? `
               <div class="debug">
                 <div class="debug-title">Debug Information:</div>
-                <pre>${error.stack}</pre>
+                <pre>${escapeHtml(stack)}</pre>
               </div>
             ` : ''}
           </div>
@@ -215,7 +249,6 @@ class ExceptionHandler {
     }
 }
 exports.ExceptionHandler = ExceptionHandler;
-// Global error handler
 exports.logger = new Logger();
 exports.exceptionHandler = new ExceptionHandler(exports.logger);
 //# sourceMappingURL=ExceptionHandler.js.map

@@ -4,10 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.auditLogger = exports.AuditLogger = exports.AuditEventType = void 0;
-const ExceptionHandler_1 = require("../Foundation/ExceptionHandler");
-const fs_1 = __importDefault(require("fs"));
+const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Storage_1 = require("../Storage/Storage");
+const ExceptionHandler_1 = require("./ExceptionHandler");
 var AuditEventType;
 (function (AuditEventType) {
     AuditEventType["AUTH_SUCCESS"] = "auth_success";
@@ -40,9 +40,12 @@ class AuditLogger {
         }
         return AuditLogger.instance;
     }
-    ensureLogDirectory() {
-        if (!fs_1.default.existsSync(this.logDirectory)) {
-            fs_1.default.mkdirSync(this.logDirectory, { recursive: true });
+    async ensureLogDirectory() {
+        try {
+            await promises_1.default.mkdir(this.logDirectory, { recursive: true });
+        }
+        catch {
+            // directory may already exist
         }
     }
     log(event) {
@@ -50,11 +53,8 @@ class AuditLogger {
             ...event,
             timestamp: new Date()
         };
-        // Log to file
-        this.logToFile(auditEvent);
-        // Log to console with appropriate level
+        this.logToFile(auditEvent).catch((err) => process.stderr.write(`AUDIT LOG WRITE FAILED: ${err}\n`));
         this.logToConsole(auditEvent);
-        // For critical events, also log as error
         if (event.severity === 'critical') {
             ExceptionHandler_1.logger.critical(`Security Event: ${event.type}`, {
                 userId: event.userId,
@@ -63,7 +63,7 @@ class AuditLogger {
             });
         }
     }
-    logToFile(event) {
+    async logToFile(event) {
         const date = event.timestamp.toISOString().split('T')[0];
         const logFile = path_1.default.join(this.logDirectory, `audit-${date}.log`);
         const logEntry = JSON.stringify({
@@ -78,7 +78,7 @@ class AuditLogger {
             action: event.action,
             details: event.details
         }) + '\n';
-        fs_1.default.appendFileSync(logFile, logEntry);
+        await promises_1.default.appendFile(logFile, logEntry);
     }
     logToConsole(event) {
         const level = this.getLogLevel(event.severity);
@@ -108,7 +108,6 @@ class AuditLogger {
     getLogLevel(severity) {
         switch (severity) {
             case 'critical':
-                return 'error';
             case 'high':
                 return 'error';
             case 'medium':
@@ -118,7 +117,6 @@ class AuditLogger {
                 return 'info';
         }
     }
-    // Convenience methods for common events
     logAuthSuccess(userId, username, ip, userAgent) {
         this.log({
             type: AuditEventType.AUTH_SUCCESS,
@@ -221,21 +219,32 @@ class AuditLogger {
             severity: 'low'
         });
     }
-    // Search audit logs
-    searchLogs(criteria) {
-        const files = fs_1.default.readdirSync(this.logDirectory)
+    async searchLogs(criteria) {
+        let files;
+        try {
+            files = await promises_1.default.readdir(this.logDirectory);
+        }
+        catch {
+            return [];
+        }
+        const logFiles = files
             .filter(file => file.startsWith('audit-'))
             .sort()
-            .reverse(); // Most recent first
+            .reverse();
         const results = [];
-        for (const file of files) {
+        for (const file of logFiles) {
             const filePath = path_1.default.join(this.logDirectory, file);
-            const content = fs_1.default.readFileSync(filePath, 'utf-8');
+            let content;
+            try {
+                content = await promises_1.default.readFile(filePath, 'utf-8');
+            }
+            catch {
+                continue;
+            }
             const lines = content.trim().split('\n');
             for (const line of lines) {
                 try {
                     const event = JSON.parse(line);
-                    // Apply filters
                     if (criteria.type && event.type !== criteria.type)
                         continue;
                     if (criteria.userId && event.userId !== criteria.userId)
@@ -250,8 +259,7 @@ class AuditLogger {
                         continue;
                     results.push(event);
                 }
-                catch (error) {
-                    // Skip malformed lines
+                catch {
                     continue;
                 }
             }
@@ -260,6 +268,5 @@ class AuditLogger {
     }
 }
 exports.AuditLogger = AuditLogger;
-// Export singleton instance
 exports.auditLogger = AuditLogger.getInstance();
 //# sourceMappingURL=AuditLogger.js.map

@@ -1,13 +1,13 @@
 import { Application } from '../Foundation/Application';
 import { Request } from './Request';
 import { Response } from './Response';
-import { Validator, ValidationException } from './Validation/Validator';
+import { ValidatorV2 as Validator, ValidationException } from '../Validation/Validator';
 import { gate } from '../Auth/Gate';
 
 export abstract class Controller {
-  protected app: Application;
+  protected app?: Application;
 
-  constructor(app: Application) {
+  constructor(app?: Application) {
     this.app = app;
   }
 
@@ -27,8 +27,11 @@ export abstract class Controller {
     return request.input(key, fallback);
   }
 
-  async validate(request: Request, rules: Record<string, string[]>): Promise<Record<string, any>> {
-    const validator = Validator.make(request.body || {}, rules);
+  async validate(request: Request, rules: Record<string, string | string[]>): Promise<Record<string, unknown>> {
+    const data = typeof request.body === 'object' && request.body !== null
+      ? (request.body as Record<string, unknown>)
+      : {};
+    const validator = Validator.make(data, rules as any);
 
     const passes = await validator.validate();
 
@@ -36,7 +39,7 @@ export abstract class Controller {
       throw new ValidationException(validator.getErrors());
     }
 
-    return request.body || {};
+    return data;
   }
 
   async authorize(request: Request, ability: string, model?: any): Promise<void> {

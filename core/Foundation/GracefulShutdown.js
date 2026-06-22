@@ -33,7 +33,7 @@ class GracefulShutdown {
             process.exit(0);
         }
         catch (error) {
-            ExceptionHandler_1.logger.error('Error during graceful shutdown', {}, error.stack);
+            ExceptionHandler_1.logger.error('Error during graceful shutdown', {}, error instanceof Error ? error.stack : String(error));
             process.exit(1);
         }
     }
@@ -46,7 +46,7 @@ class GracefulShutdown {
             }
         }
         catch (error) {
-            ExceptionHandler_1.logger.error('Error closing database connection', {}, error.stack);
+            ExceptionHandler_1.logger.error('Error closing database connection', {}, error instanceof Error ? error.stack : String(error));
             throw error;
         }
     }
@@ -66,12 +66,22 @@ function setupGracefulShutdown() {
     });
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-        ExceptionHandler_1.logger.critical('Uncaught Exception', {}, error.stack);
+        try {
+            ExceptionHandler_1.logger.critical('Uncaught Exception', {}, error.stack);
+        }
+        catch {
+            process.stderr.write(`UNCAUGHT EXCEPTION: ${error.message}\n${error.stack}\n`);
+        }
         shutdown.handle('uncaughtException');
     });
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason) => {
-        ExceptionHandler_1.logger.critical('Unhandled Rejection', { reason: String(reason) });
+        try {
+            ExceptionHandler_1.logger.critical('Unhandled Rejection', { reason: String(reason) });
+        }
+        catch {
+            process.stderr.write(`UNHANDLED REJECTION: ${String(reason)}\n`);
+        }
         shutdown.handle('unhandledRejection');
     });
 }

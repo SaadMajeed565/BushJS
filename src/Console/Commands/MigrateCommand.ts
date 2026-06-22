@@ -32,7 +32,7 @@ export class MigrateCommand extends Command {
         for (let i = schemaFiles.length - 1; i >= 0; i--) {
           const filePath = schemaFiles[i];
           const file = path.basename(filePath);
-          const SchemaClass = loadCommandClass(filePath);
+          const SchemaClass = await loadCommandClass(filePath);
           if (!SchemaClass) {
             console.warn(`Skipping schema file ${file}: no default export found.`);
             continue;
@@ -53,7 +53,7 @@ export class MigrateCommand extends Command {
       console.log('Running schema files...');
       for (const filePath of schemaFiles) {
         const file = path.basename(filePath);
-        const SchemaClass = loadCommandClass(filePath);
+        const SchemaClass = await loadCommandClass(filePath);
         if (!SchemaClass) {
           console.warn(`Skipping schema file ${file}: no default export found.`);
           continue;
@@ -69,7 +69,7 @@ export class MigrateCommand extends Command {
         console.log(`Applied schema file: ${file}`);
       }
       console.log('Schema files completed successfully.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }

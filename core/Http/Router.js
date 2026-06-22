@@ -53,15 +53,7 @@ class Router {
         this.middlewareGroups.set(name, middleware);
     }
     resource(path, controller, options = {}) {
-        const actions = {
-            index: 'GET',
-            create: 'GET',
-            store: 'POST',
-            show: 'GET',
-            edit: 'GET',
-            update: 'PUT',
-            destroy: 'DELETE',
-        };
+        const actions = ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
         const routes = [
             { name: 'index', method: 'GET', path: '', action: 'index' },
             { name: 'create', method: 'GET', path: '/create', action: 'create' },
@@ -71,7 +63,7 @@ class Router {
             { name: 'update', method: 'PUT', path: '/:id', action: 'update' },
             { name: 'destroy', method: 'DELETE', path: '/:id', action: 'destroy' },
         ];
-        const only = options.only || Object.keys(actions);
+        const only = options.only || [...actions];
         const except = options.except || [];
         const middleware = options.middleware || [];
         routes.forEach(route => {
@@ -98,8 +90,6 @@ class Router {
         });
     }
     name(name) {
-        // This would be called after registering a route
-        // For simplicity, we'll assume the last registered route
         const lastRoute = this.getLastRoute();
         if (lastRoute) {
             lastRoute.name = name;
@@ -119,13 +109,15 @@ class Router {
         return path;
     }
     buildPath(path) {
-        let fullPath = path;
+        let prefix = '';
         this.groups.forEach(group => {
             if (group.prefix) {
-                fullPath = group.prefix + fullPath;
+                const p = group.prefix.endsWith('/') ? group.prefix.slice(0, -1) : group.prefix;
+                prefix += p;
             }
         });
-        return fullPath;
+        const route = path.startsWith('/') ? path : '/' + path;
+        return prefix + route;
     }
     getGroupMiddleware() {
         let middleware = [];

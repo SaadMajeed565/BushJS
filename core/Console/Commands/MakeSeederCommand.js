@@ -7,6 +7,8 @@ exports.MakeSeederCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
+const support_1 = require("./support");
 function toPascalCase(value) {
     return value
         .replace(/[^a-zA-Z0-9]+/g, ' ')
@@ -21,7 +23,7 @@ class MakeSeederCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:seeder';
-        this.description = 'Create a new database seeder file.';
+        this.description = 'Create a new database seeder file (supports --path override).';
         this.app = app;
     }
     async handle(args) {
@@ -36,14 +38,14 @@ class MakeSeederCommand extends Command_1.Command {
             .slice(0, 14);
         const normalized = normalizeName(name);
         const fileName = `${timestamp}_${normalized}_seeder.ts`;
-        const seedersPath = path_1.default.resolve(this.app.basePath, 'database', 'seeds');
+        const seedersPath = (0, support_1.resolveCommandDir)(this.app.basePath, Config_1.config.structure.seeders, args);
         await promises_1.default.mkdir(seedersPath, { recursive: true });
         const className = `${toPascalCase(name)}Seeder`;
-        const stubPath = path_1.default.resolve(__dirname, '../stubs/seeder.stub');
+        const stubPath = path_1.default.join(this.app.basePath, 'src', 'stubs', 'seeder.stub');
         let stub = await promises_1.default.readFile(stubPath, 'utf-8');
         stub = stub.replace(/{{class}}/g, className);
         await promises_1.default.writeFile(path_1.default.join(seedersPath, fileName), stub);
-        console.log(`Seeder created at database/seeds/${fileName}`);
+        console.log(`Seeder created at ${path_1.default.join(seedersPath, fileName)}`);
     }
 }
 exports.MakeSeederCommand = MakeSeederCommand;

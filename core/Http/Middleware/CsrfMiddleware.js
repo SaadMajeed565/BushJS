@@ -15,27 +15,26 @@ class CsrfMiddleware extends Middleware_1.Middleware {
         this.TOKEN_SESSION = 'csrf-token';
     }
     async handle(request, response, next) {
-        // Generate CSRF token if not exists
-        if (!request.session?.get(this.TOKEN_SESSION)) {
-            request.session?.put(this.TOKEN_SESSION, this.generateToken());
+        if (!request.session?.[this.TOKEN_SESSION]) {
+            if (request.session) {
+                request.session[this.TOKEN_SESSION] = this.generateToken();
+            }
         }
-        // Add token to response headers
-        const token = request.session?.get(this.TOKEN_SESSION);
-        response.header('X-CSRF-TOKEN', token);
-        // Set token in cookie for XHR requests
-        response.cookie(this.TOKEN_COOKIE, token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
-        // Skip CSRF validation for safe methods and GET requests
+        const token = request.session?.[this.TOKEN_SESSION];
+        if (token) {
+            response.header('X-CSRF-TOKEN', token);
+            response.cookie(this.TOKEN_COOKIE, token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+        }
         const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
         if (safeMethods.includes(request.method)) {
             await next();
             return;
         }
-        // Validate CSRF token for state-changing requests
         if (!this.validateToken(request)) {
             response.status(419).json({
                 message: 'CSRF token mismatch.',
@@ -52,28 +51,23 @@ class CsrfMiddleware extends Middleware_1.Middleware {
     }
     validateToken(request) {
         const token = this.getTokenFromRequest(request);
-        const sessionToken = request.session?.get(this.TOKEN_SESSION);
+        const sessionToken = request.session?.[this.TOKEN_SESSION];
         if (!token || !sessionToken) {
             return false;
         }
-        // Timing-safe comparison to prevent timing attacks
         return this.timingSafeEqual(token, sessionToken);
     }
     getTokenFromRequest(request) {
-        // Check header first (AJAX requests)
         const headerToken = request.header(this.TOKEN_HEADER);
         if (headerToken && typeof headerToken === 'string') {
             return headerToken;
         }
-        // Check form body
-        const bodyToken = request.body?.['_token'] || request.body?.['csrf_token'];
-        if (bodyToken) {
-            return bodyToken;
-        }
-        // Check query parameters (not recommended but supported)
-        const queryToken = request.query?.['_token'] || request.query?.['csrf_token'];
-        if (queryToken) {
-            return queryToken;
+        if (typeof request.body === 'object' && request.body !== null) {
+            const body = request.body;
+            const bodyToken = body['_token'] || body['csrf_token'];
+            if (typeof bodyToken === 'string') {
+                return bodyToken;
+            }
         }
         return null;
     }

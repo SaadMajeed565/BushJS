@@ -46,7 +46,7 @@ export class MakeSchemaCommand extends Command {
 
     const className = `${toPascalCase(name)}Schema`;
     const tableName = normalized.endsWith('s') ? normalized : `${normalized}s`;
-    const stubPath = path.resolve(__dirname, '../stubs/schema.stub');
+    const stubPath = path.join(this.app.basePath, 'src', 'stubs', 'schema.stub');
     let stub = await fs.readFile(stubPath, 'utf-8');
     stub = stub.replace(/{{class}}/g, className).replace(/{{table}}/g, tableName);
 

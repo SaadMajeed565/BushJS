@@ -1,13 +1,13 @@
 import { Request } from '../Request';
-import { ValidationException } from '../../Validation/Validator';
+import { ValidationException } from '../../Exceptions/HttpExceptions';
 export { ValidationException };
 export declare class Validator {
     private rules;
     private messages;
     private data;
     private errors;
-    constructor(data: Record<string, any>, rules: Record<string, string[]>, messages?: Record<string, string>);
-    static make(data: Record<string, any>, rules: Record<string, string[]>, messages?: Record<string, string>): Validator;
+    constructor(data: Record<string, unknown>, rules: Record<string, string[]>, messages?: Record<string, string>);
+    static make(data: Record<string, unknown>, rules: Record<string, string[]>, messages?: Record<string, string>): Validator;
     validate(): Promise<boolean>;
     fails(): boolean;
     getErrors(): Record<string, string[]>;

@@ -27,7 +27,7 @@ export class SeedCommand extends Command {
       console.log('Running seeders...');
       for (const filePath of seederFiles) {
         const file = path.basename(filePath);
-        const SeederClass = loadCommandClass(filePath);
+        const SeederClass = await loadCommandClass(filePath);
         if (!SeederClass) {
           console.warn(`Skipping seeder ${file}: no default export found.`);
           continue;
@@ -43,8 +43,8 @@ export class SeedCommand extends Command {
         console.log(`Seeded: ${file}`);
       }
       console.log('Seeders completed successfully.');
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+      if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
         console.log(`${seedersPath} does not exist.`);
         return;
       }

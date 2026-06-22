@@ -13,11 +13,7 @@ const MakeCommandCommand_1 = require("./Commands/MakeCommandCommand");
 const MakeRouteCommand_1 = require("./Commands/MakeRouteCommand");
 const SeedCommand_1 = require("./Commands/SeedCommand");
 const SchemaCommand_1 = require("./Commands/SchemaCommand");
-const MonitorHealthCommand_1 = require("./Commands/MonitorHealthCommand");
-const MonitorMetricsCommand_1 = require("./Commands/MonitorMetricsCommand");
-const BackupCreateCommand_1 = require("./Commands/BackupCreateCommand");
-const BackupListCommand_1 = require("./Commands/BackupListCommand");
-const BackupCleanupCommand_1 = require("./Commands/BackupCleanupCommand");
+const MigrateCommand_1 = require("./Commands/MigrateCommand");
 const HelpCommand_1 = require("./Commands/HelpCommand");
 class ConsoleKernel {
     constructor(app) {
@@ -41,11 +37,7 @@ class ConsoleKernel {
         this.register(new MakeRouteCommand_1.MakeRouteCommand(this.app));
         this.register(new SeedCommand_1.SeedCommand(this.app));
         this.register(new SchemaCommand_1.SchemaCommand(this.app));
-        this.register(new MonitorHealthCommand_1.MonitorHealthCommand(this.app));
-        this.register(new MonitorMetricsCommand_1.MonitorMetricsCommand(this.app));
-        this.register(new BackupCreateCommand_1.BackupCreateCommand(this.app));
-        this.register(new BackupListCommand_1.BackupListCommand(this.app));
-        this.register(new BackupCleanupCommand_1.BackupCleanupCommand(this.app));
+        this.register(new MigrateCommand_1.MigrateCommand(this.app));
         this.register(new HelpCommand_1.HelpCommand(() => this.showHelp()));
     }
     async handle(argv = []) {
@@ -59,10 +51,36 @@ class ConsoleKernel {
         await command.handle(args);
     }
     showHelp() {
-        console.log('Available commands:');
-        const sorted = Array.from(this.commands.values()).sort((a, b) => a.signature.localeCompare(b.signature));
-        for (const command of sorted) {
-            console.log(`  ${command.signature} - ${command.description}`);
+        const groups = [
+            { title: 'General', matcher: (signature) => signature === 'help' },
+            { title: 'Generators', matcher: (signature) => signature.startsWith('make:') },
+            { title: 'Database', matcher: (signature) => signature === 'schema' || signature === 'seed' || signature === 'migrate' },
+        ];
+        const commands = Array.from(this.commands.values());
+        const assigned = new Set();
+        console.log('Available commands:\n');
+        for (const group of groups) {
+            const inGroup = commands
+                .filter((command) => group.matcher(command.signature))
+                .sort((a, b) => a.signature.localeCompare(b.signature));
+            if (inGroup.length === 0) {
+                continue;
+            }
+            console.log(`${group.title}:`);
+            for (const command of inGroup) {
+                assigned.add(command.signature);
+                console.log(`  ${command.signature.padEnd(20)} ${command.description}`);
+            }
+            console.log('');
+        }
+        const other = commands
+            .filter((command) => !assigned.has(command.signature))
+            .sort((a, b) => a.signature.localeCompare(b.signature));
+        if (other.length > 0) {
+            console.log('Other:');
+            for (const command of other) {
+                console.log(`  ${command.signature.padEnd(20)} ${command.description}`);
+            }
         }
     }
 }

@@ -7,6 +7,8 @@ exports.MakeSchemaCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
+const support_1 = require("./support");
 function toPascalCase(value) {
     return value
         .replace(/[^a-zA-Z0-9]+/g, ' ')
@@ -21,7 +23,7 @@ class MakeSchemaCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:schema';
-        this.description = 'Create a new database schema file.';
+        this.description = 'Create a new database schema file (supports --path override).';
         this.app = app;
     }
     async handle(args) {
@@ -36,15 +38,15 @@ class MakeSchemaCommand extends Command_1.Command {
             .slice(0, 14);
         const normalized = normalizeName(name);
         const fileName = `${timestamp}_${normalized}.ts`;
-        const schemasPath = path_1.default.resolve(this.app.basePath, 'database', 'schemas');
+        const schemasPath = (0, support_1.resolveCommandDir)(this.app.basePath, Config_1.config.structure.schemas, args);
         await promises_1.default.mkdir(schemasPath, { recursive: true });
         const className = `${toPascalCase(name)}Schema`;
         const tableName = normalized.endsWith('s') ? normalized : `${normalized}s`;
-        const stubPath = path_1.default.resolve(__dirname, '../stubs/schema.stub');
+        const stubPath = path_1.default.join(this.app.basePath, 'src', 'stubs', 'schema.stub');
         let stub = await promises_1.default.readFile(stubPath, 'utf-8');
         stub = stub.replace(/{{class}}/g, className).replace(/{{table}}/g, tableName);
         await promises_1.default.writeFile(path_1.default.join(schemasPath, fileName), stub);
-        console.log(`Schema created at database/schemas/${fileName}`);
+        console.log(`Schema created at ${path_1.default.join(schemasPath, fileName)}`);
     }
 }
 exports.MakeSchemaCommand = MakeSchemaCommand;

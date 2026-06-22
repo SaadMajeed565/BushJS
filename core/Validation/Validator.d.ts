@@ -1,31 +1,29 @@
+import { ValidationException } from '../Exceptions/HttpExceptions';
 export interface ValidationRule {
-    validate(value: any, field: string): boolean | Promise<boolean>;
+    validate(value: unknown, field: string): boolean | Promise<boolean>;
     message(): string;
 }
 export declare class RequiredRule implements ValidationRule {
-    validate(value: any): boolean;
+    validate(value: unknown): boolean;
     message(): string;
 }
 export declare class EmailRule implements ValidationRule {
-    validate(value: any): boolean;
+    validate(value: unknown): boolean;
     message(): string;
 }
 export declare class MinRule implements ValidationRule {
     private min;
     constructor(min: number);
-    validate(value: any): boolean;
+    validate(value: unknown): boolean;
     message(): string;
 }
 export declare class MaxRule implements ValidationRule {
     private max;
     constructor(max: number);
-    validate(value: any): boolean;
+    validate(value: unknown): boolean;
     message(): string;
 }
-export declare class ValidationException extends Error {
-    errors: Record<string, string[]>;
-    constructor(errors: Record<string, string[]>);
-}
+export { ValidationException };
 type ValidationRuleAliases = 'required' | 'email' | 'min' | 'max' | 'numeric' | 'string' | 'confirmed' | 'regex' | 'url' | 'date' | 'after' | 'before' | 'array' | 'in' | 'not_in';
 type ValidationRuleString = ValidationRuleAliases | `${ValidationRuleAliases}:${string}`;
 export type ValidationRules = {
@@ -42,8 +40,8 @@ export declare class ValidatorV2 {
     private messages;
     private validationErrors;
     private fieldNames;
-    constructor(data: Record<string, any>, rules: ValidationRules, messages?: ValidationMessages);
-    static make(data: Record<string, any>, rules: ValidationRules, messages?: ValidationMessages): ValidatorV2;
+    constructor(data: Record<string, unknown>, rules: ValidationRules, messages?: ValidationMessages);
+    static make(data: Record<string, unknown>, rules: ValidationRules, messages?: ValidationMessages): ValidatorV2;
     setNames(names: Record<string, string>): this;
     validate(): boolean;
     fails(): boolean;
@@ -74,12 +72,12 @@ export declare class Validator {
     private rules;
     private data;
     private errors;
-    constructor(data: Record<string, any>);
+    constructor(data: Record<string, unknown>);
     rule(field: string, ...rules: ValidationRule[]): this;
     validate(): Promise<boolean>;
     getErrors(): Record<string, string[]>;
     fails(): boolean;
-    static make(data: Record<string, any>): Validator;
+    static make(data: Record<string, unknown>): Validator;
 }
 export declare const rules: {
     required: () => RequiredRule;
@@ -87,5 +85,9 @@ export declare const rules: {
     min: (min: number) => MinRule;
     max: (max: number) => MaxRule;
 };
-export {};
+export declare class FormRequest {
+    protected rules(): ValidationRules;
+    protected messages(): ValidationMessages;
+    validateRequest(request: import('../Http/Request').Request): Promise<void>;
+}
 //# sourceMappingURL=Validator.d.ts.map

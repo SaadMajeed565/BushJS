@@ -25,11 +25,8 @@ class ApiResponse {
     created(data, message = 'Created successfully') {
         this.success(data, message, 201);
     }
-    noContent(message = 'No content') {
-        this.response.status(204).json({
-            success: true,
-            message,
-        });
+    noContent() {
+        this.response.status(204).send();
     }
     paginate(data, total, page, perPage, message = 'Data retrieved successfully') {
         const totalPages = Math.ceil(total / perPage);

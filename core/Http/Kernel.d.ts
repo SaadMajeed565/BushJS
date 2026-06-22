@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import { Application } from '../Foundation/Application';
 export declare class HttpKernel {
     middleware: any[];
@@ -14,6 +15,8 @@ export declare class HttpKernel {
     private registerGraphQLRoutes;
     private registerSocketRoutes;
     private handleRequest;
+    private registerErrorHandler;
+    private registerHealthRoute;
     private executeAction;
 }
 //# sourceMappingURL=Kernel.d.ts.map

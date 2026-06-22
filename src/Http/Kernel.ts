@@ -1,4 +1,6 @@
+import 'express-async-errors';
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import expressWs from 'express-ws';
@@ -10,19 +12,70 @@ import { Request } from './Request';
 import { Response } from './Response';
 import { Application } from '../Foundation/Application';
 import { Router } from './Router';
-import { exceptionHandler } from '../Foundation/ExceptionHandler';
+import { exceptionHandler, logger } from '../Foundation/ExceptionHandler';
 import { NotFoundException } from '../Exceptions/HttpExceptions';
 import { auth } from '../Auth/Auth';
 import { config } from '../Config/Config';
 import { Storage } from '../Storage/Storage';
 
-/** Copy auth fields from the Bush request onto Express so a later `Request.fromExpress` sees them. */
 function syncAuthStateToExpress(expressReq: express.Request, bush: Request): void {
-  (expressReq as any).user = bush.user;
-  (expressReq as any).userId = bush.userId;
+  const target = expressReq as unknown as Record<string, unknown>;
+  const bushAny = bush as unknown as Record<string, unknown>;
+  target.user = bushAny.user;
+  target.userId = bush.userId;
   if (bush.token !== undefined) {
-    (expressReq as any).token = bush.token;
+    target.token = bush.token;
   }
+}
+
+function isMiddlewareInstance(mw: unknown): mw is { handle: (req: Request, res: Response, next: () => Promise<void>) => Promise<void> } {
+  return typeof mw === 'object' && mw !== null && 'handle' in mw && typeof (mw as any).handle === 'function';
+}
+
+function isMiddlewareClass(mw: unknown): mw is { new (...args: any[]): { handle: (req: Request, res: Response, next: () => Promise<void>) => Promise<void> } } {
+  return typeof mw === 'function' && 'prototype' in (mw as any) && typeof (mw as any).prototype.handle === 'function';
+}
+
+function isFunctionMiddleware(mw: unknown): mw is (req: Request, res: Response, next: () => Promise<void>) => Promise<void> {
+  return typeof mw === 'function' && !('prototype' in (mw as any));
+}
+
+function wrapMiddleware(mw: unknown): express.RequestHandler {
+  if (isMiddlewareInstance(mw)) {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const request = await Request.fromExpress(req);
+      const response = new Response(res);
+      await mw.handle(request, response, async () => {
+        syncAuthStateToExpress(req, request);
+        await next();
+      });
+    };
+  }
+
+  if (isMiddlewareClass(mw)) {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const request = await Request.fromExpress(req);
+      const response = new Response(res);
+      const instance = new mw();
+      await instance.handle(request, response, async () => {
+        syncAuthStateToExpress(req, request);
+        await next();
+      });
+    };
+  }
+
+  if (isFunctionMiddleware(mw)) {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const request = await Request.fromExpress(req);
+      const response = new Response(res);
+      await mw(request, response, async () => {
+        syncAuthStateToExpress(req, request);
+        await next();
+      });
+    };
+  }
+
+  return mw as express.RequestHandler;
 }
 
 export class HttpKernel {
@@ -33,16 +86,17 @@ export class HttpKernel {
   constructor(app: Application) {
     this.app = app;
     this.expressApp = express();
+    this.expressApp.set('trust proxy', 1);
     expressWs(this.expressApp);
 
     this.setupSecurityMiddleware();
     this.setupBasicMiddleware();
     this.setupRateLimiting();
     this.setupSession();
+    this.registerHealthRoute();
   }
 
   private setupSecurityMiddleware(): void {
-    // Enhanced Helmet configuration with CSP and HSTS
     this.expressApp.use(helmet({
       contentSecurityPolicy: {
         directives: {
@@ -66,37 +120,32 @@ export class HttpKernel {
       referrerPolicy: { policy: "strict-origin-when-cross-origin" }
     }));
 
-    // Enhanced CORS configuration
     const corsOptions = {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         const allowedOrigins = config.cors?.allowed_origins || ['http://localhost:3000'];
         const isDev = config.app.env === 'development';
 
-        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
 
-        // In development, allow localhost origins
         if (isDev && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
           return callback(null, true);
         }
 
-        // Check against allowed origins
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
 
-        return callback(new Error('Not allowed by CORS'));
+        return callback(null, false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
       exposedHeaders: ['X-RateLimit-Remaining', 'X-RateLimit-Reset'],
-      maxAge: 86400 // 24 hours
+      maxAge: 86400
     };
 
     this.expressApp.use(cors(corsOptions));
 
-    // HTTPS enforcement middleware
     if (config.app.env === 'production') {
       this.expressApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (req.header('x-forwarded-proto') !== 'https') {
@@ -109,43 +158,43 @@ export class HttpKernel {
   }
 
   private setupBasicMiddleware(): void {
+    this.expressApp.use(compression({ threshold: 1024 }));
     this.expressApp.use(express.json({ limit: '10mb' }));
     this.expressApp.use(express.urlencoded({ extended: true, limit: '10mb' }));
   }
 
   private setupRateLimiting(): void {
-    // Global rate limiting
     const globalLimiter = rateLimit({
-      windowMs: config.rate_limit?.global_window_ms || 15 * 60 * 1000, // 15 minutes
-      max: config.rate_limit?.global_max || 1000, // 1000 requests per window
+      windowMs: config.rate_limit?.global_window_ms || 15 * 60 * 1000,
+      max: config.rate_limit?.global_max || 1000,
       message: {
         message: 'Too many requests from this IP, please try again later.',
         retryAfter: Math.ceil((config.rate_limit?.global_window_ms || 15 * 60 * 1000) / 1000)
       },
       standardHeaders: true,
       legacyHeaders: false,
-      skip: (req) => {
-        // Skip rate limiting for health checks
-        return req.path === '/health';
-      }
+      skip: (req) => req.path === '/health' || req.path.startsWith('/api/')
     });
 
     this.expressApp.use(globalLimiter);
   }
 
   private setupSession(): void {
-    this.expressApp.use(
-      session({
-        secret: config.auth.session_secret,
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-          secure: config.app.env === 'production',
-          httpOnly: true,
-          sameSite: 'lax',
-        },
-      })
-    );
+    const sessionMw = session({
+      secret: config.auth.session_secret,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: config.app.env === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
+      },
+    });
+
+    this.expressApp.use((req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      sessionMw(req, res, next);
+    });
   }
 
   async listen(port = 3000): Promise<void> {
@@ -153,7 +202,6 @@ export class HttpKernel {
       'uploads',
       'avatars',
       'logs',
-      'logs/audit',
       'cache',
       'backups',
       'reports'
@@ -163,47 +211,24 @@ export class HttpKernel {
     this.registerRoutes();
     this.registerGraphQLRoutes();
     this.registerSocketRoutes();
+    this.registerErrorHandler();
 
     return new Promise((resolve) => {
       this.expressApp.listen(port, () => {
-        console.log(`Server running at http://localhost:${port}`);
+        logger.info(`Server running at http://localhost:${port}`);
         resolve();
       });
     });
   }
 
   private registerRoutes(): void {
-    // Convert our custom routes to Express routes
     this.app.router.getRoutes().forEach((routeDefinition) => {
-      const method = routeDefinition.method.toLowerCase() as keyof express.Application;
+      const rawMethod = routeDefinition.method.toLowerCase();
+      const method = rawMethod === 'any' ? 'all' : rawMethod;
       const path = routeDefinition.path;
       const middleware = routeDefinition.middleware || [];
 
-      const expressMiddleware = middleware.map(mw => {
-        if (typeof mw.handle === 'function') {
-          // Already an instance
-          return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const request = await Request.fromExpress(req);
-            const response = new Response(res);
-            await mw.handle(request, response, async () => {
-              syncAuthStateToExpress(req, request);
-              await next();
-            });
-          };
-        } else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
-          // Class constructor
-          return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const request = await Request.fromExpress(req);
-            const response = new Response(res);
-            const instance = new mw();
-            await instance.handle(request, response, async () => {
-              syncAuthStateToExpress(req, request);
-              await next();
-            });
-          };
-        }
-        return mw; // Function middleware
-      });
+      const expressMiddleware = middleware.map(mw => wrapMiddleware(mw));
 
       (this.expressApp as any)[method](path, ...expressMiddleware, async (req: express.Request, res: express.Response) => {
         await this.handleRequest(req, res);
@@ -213,56 +238,13 @@ export class HttpKernel {
 
   private registerMiddleware(): void {
     this.middleware.forEach((mw) => {
-      if (typeof mw.handle === 'function') {
-        this.expressApp.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-          const request = await Request.fromExpress(req);
-          const response = new Response(res);
-          await mw.handle(request, response, async () => {
-            syncAuthStateToExpress(req, request);
-            await next();
-          });
-        });
-      } else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
-        this.expressApp.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-          const request = await Request.fromExpress(req);
-          const response = new Response(res);
-          const instance = new mw();
-          await instance.handle(request, response, async () => {
-            syncAuthStateToExpress(req, request);
-            await next();
-          });
-        });
-      } else {
-        this.expressApp.use(mw);
-      }
+      this.expressApp.use(wrapMiddleware(mw));
     });
   }
 
   private registerGraphQLRoutes(): void {
     this.app.getGraphQLRoutes().forEach((route) => {
-      const middleware = (route.middleware || []).map((mw) => {
-        if (typeof mw.handle === 'function') {
-          return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const request = await Request.fromExpress(req);
-            const response = new Response(res);
-            await mw.handle(request, response, async () => {
-              syncAuthStateToExpress(req, request);
-              await next();
-            });
-          };
-        } else if (mw && typeof mw === 'function' && mw.prototype && typeof mw.prototype.handle === 'function') {
-          return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            const request = await Request.fromExpress(req);
-            const response = new Response(res);
-            const instance = new mw();
-            await instance.handle(request, response, async () => {
-              syncAuthStateToExpress(req, request);
-              await next();
-            });
-          };
-        }
-        return mw;
-      });
+      const middleware = (route.middleware || []).map((mw) => wrapMiddleware(mw));
 
       const handler = createHandler({
         schema: route.schema,
@@ -281,7 +263,6 @@ export class HttpKernel {
         },
       });
 
-      // graphql-http expects an `all` route to support both GET and POST.
       (this.expressApp as any).all(route.path, ...middleware, handler);
     });
   }
@@ -307,22 +288,35 @@ export class HttpKernel {
   }
 
   private async handleRequest(req: express.Request, res: express.Response): Promise<void> {
+    const request = await Request.fromExpress(req);
+    const response = new Response(res);
+
     try {
-      const request = await Request.fromExpress(req);
-      const response = new Response(res);
       const matched = this.app.router.match(request.method, request.path);
 
       if (!matched) {
-        throw new NotFoundException();
+        throw new NotFoundException('Route', `${request.method} ${request.path}`);
       }
 
       request.params = matched.params;
       await this.executeAction(matched.route.action, request, response);
-    } catch (error: any) {
-      const request = await Request.fromExpress(req);
-      const response = new Response(res);
+    } catch (error: unknown) {
       exceptionHandler.renderError(error, request, response);
     }
+  }
+
+  private registerErrorHandler(): void {
+    this.expressApp.use(async (err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      const request = await Request.fromExpress(req);
+      const response = new Response(res);
+      exceptionHandler.renderError(err, request, response);
+    });
+  }
+
+  private registerHealthRoute(): void {
+    this.expressApp.get('/health', (_req: express.Request, res: express.Response) => {
+      res.json({ status: 'ok', uptime: process.uptime() });
+    });
   }
 
   private async executeAction(action: any, request: Request, response: Response): Promise<void> {

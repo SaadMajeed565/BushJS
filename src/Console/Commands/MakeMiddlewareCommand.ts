@@ -24,7 +24,7 @@ export class MakeMiddlewareCommand extends Command {
     const middlewarePath = path.resolve(this.app.basePath, config.structure.middleware, `${name}.ts`);
     await fs.mkdir(path.dirname(middlewarePath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let middlewareStub = await fs.readFile(path.join(stubsPath, 'middleware.stub'), 'utf-8');
     middlewareStub = middlewareStub.replace(/{{class}}/g, name);
 

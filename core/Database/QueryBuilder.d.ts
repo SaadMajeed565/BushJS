@@ -1,22 +1,23 @@
-import { Model as MongooseModel, Document } from 'mongoose';
-export declare class QueryBuilder {
+import { Model as MongooseModel } from 'mongoose';
+export declare class QueryBuilder<T = any> {
     private model;
     private conditions;
+    private hasConditions;
     private limitValue?;
     private skipValue?;
     private sortValue?;
     constructor(model: MongooseModel<any>);
-    where(column: string, value: any): this;
-    whereIn(column: string, values: any[]): this;
-    whereNotIn(column: string, values: any[]): this;
+    where(column: string, value: unknown): this;
+    whereIn(column: string, values: unknown[]): this;
+    whereNotIn(column: string, values: unknown[]): this;
     limit(limit: number): this;
     skip(skip: number): this;
     orderBy(column: string, direction?: 'asc' | 'desc'): this;
-    get(): Promise<Document[]>;
-    first(): Promise<Document | null>;
+    get(): Promise<T[]>;
+    first(): Promise<T | null>;
     count(): Promise<number>;
     exists(): Promise<boolean>;
-    delete(): Promise<any>;
-    update(data: Record<string, any>): Promise<any>;
+    delete(): Promise<unknown>;
+    update(data: Record<string, unknown>): Promise<unknown>;
 }
 //# sourceMappingURL=QueryBuilder.d.ts.map

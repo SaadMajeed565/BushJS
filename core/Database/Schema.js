@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaRunner = exports.SchemaBuilder = exports.BaseSchema = void 0;
 const Connection_1 = require("./Connection");
+const ExceptionHandler_1 = require("../Foundation/ExceptionHandler");
 class BaseSchema {
     async createTable(tableName, callback) {
         await this.createCollection(tableName, callback);
@@ -9,7 +10,7 @@ class BaseSchema {
     async createCollection(collectionName, callback) {
         const schema = new SchemaBuilder(collectionName);
         callback(schema);
-        const db = Connection_1.connection.getConnection().connection.db;
+        const db = (0, Connection_1.getDefaultConnection)().getConnection().connection.db;
         if (!db) {
             throw new Error('MongoDB connection is not established');
         }
@@ -20,11 +21,12 @@ class BaseSchema {
         }
         try {
             await db.createCollection(collectionName, options);
-            console.log(`Created collection: ${collectionName}`);
+            ExceptionHandler_1.logger.info(`Created collection: ${collectionName}`);
         }
         catch (error) {
-            if (error.codeName === 'NamespaceExists' || error.code === 48) {
-                console.log(`Collection already exists: ${collectionName}`);
+            const err = error;
+            if (err.codeName === 'NamespaceExists' || err.code === 48) {
+                ExceptionHandler_1.logger.info(`Collection already exists: ${collectionName}`);
             }
             else {
                 throw error;
@@ -35,31 +37,31 @@ class BaseSchema {
         }
     }
     async createIndexes(collectionName, indexes) {
-        const db = Connection_1.connection.getConnection().connection.db;
+        const db = (0, Connection_1.getDefaultConnection)().getConnection().connection.db;
         if (!db) {
             throw new Error('MongoDB connection is not established');
         }
         const collection = db.collection(collectionName);
         for (const index of indexes) {
             await collection.createIndex(index.fields, index.options);
-            console.log(`Created index for ${collectionName}:`, index.fields, index.options);
+            ExceptionHandler_1.logger.info(`Created index for ${collectionName}`, { fields: index.fields, options: index.options });
         }
     }
     async dropTable(tableName) {
         await this.dropCollection(tableName);
     }
     async dropCollection(collectionName) {
-        const db = Connection_1.connection.getConnection().connection.db;
+        const db = (0, Connection_1.getDefaultConnection)().getConnection().connection.db;
         if (!db) {
             throw new Error('MongoDB connection is not established');
         }
         const exists = await db.listCollections({ name: collectionName }).hasNext();
         if (exists) {
             await db.dropCollection(collectionName);
-            console.log(`Dropped collection: ${collectionName}`);
+            ExceptionHandler_1.logger.info(`Dropped collection: ${collectionName}`);
         }
         else {
-            console.log(`Collection does not exist: ${collectionName}`);
+            ExceptionHandler_1.logger.info(`Collection does not exist: ${collectionName}`);
         }
     }
 }
@@ -209,18 +211,18 @@ class SchemaRunner {
         return this;
     }
     async run() {
-        console.log('Running schema files...');
+        ExceptionHandler_1.logger.info('Running schema files...');
         for (const schema of this.schemas) {
             await schema.up();
         }
-        console.log('All schemas completed.');
+        ExceptionHandler_1.logger.info('All schemas completed.');
     }
     async rollback() {
-        console.log('Rolling back schema files...');
+        ExceptionHandler_1.logger.info('Rolling back schema files...');
         for (let i = this.schemas.length - 1; i >= 0; i--) {
             await this.schemas[i].down();
         }
-        console.log('Rollback completed.');
+        ExceptionHandler_1.logger.info('Rollback completed.');
     }
 }
 exports.SchemaRunner = SchemaRunner;

@@ -7,11 +7,12 @@ exports.MakeMiddlewareCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
 class MakeMiddlewareCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:middleware';
-        this.description = 'Create a new middleware class.';
+        this.description = 'Create a new middleware class in the configured middleware directory.';
         this.app = app;
     }
     async handle(args) {
@@ -20,9 +21,9 @@ class MakeMiddlewareCommand extends Command_1.Command {
             console.log('Please provide a middleware name.');
             return;
         }
-        const middlewarePath = path_1.default.resolve(this.app.basePath, 'app', 'Http', 'Middleware', `${name}.ts`);
+        const middlewarePath = path_1.default.resolve(this.app.basePath, Config_1.config.structure.middleware, `${name}.ts`);
         await promises_1.default.mkdir(path_1.default.dirname(middlewarePath), { recursive: true });
-        const stubsPath = path_1.default.resolve(__dirname, '../stubs');
+        const stubsPath = path_1.default.join(this.app.basePath, 'src', 'stubs');
         let middlewareStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'middleware.stub'), 'utf-8');
         middlewareStub = middlewareStub.replace(/{{class}}/g, name);
         await promises_1.default.writeFile(middlewarePath, middlewareStub);

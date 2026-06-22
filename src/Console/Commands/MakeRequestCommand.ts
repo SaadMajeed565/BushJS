@@ -25,7 +25,7 @@ export class MakeRequestCommand extends Command {
     const requestPath = path.resolve(this.app.basePath, config.structure.requests, `${name}.ts`);
     await fs.mkdir(path.dirname(requestPath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let requestStub = await fs.readFile(path.join(stubsPath, 'request.stub'), 'utf-8');
     requestStub = requestStub.replace(/{{class}}/g, name);
 

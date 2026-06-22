@@ -208,15 +208,17 @@ class DependencyScanner {
     async autoFixVulnerabilities() {
         try {
             ExceptionHandler_1.logger.info('Attempting to auto-fix vulnerabilities...');
+            const beforeReport = await this.scanDependencies();
+            const beforeCount = beforeReport.totalVulnerabilities;
             const { stdout, stderr } = await execAsync('npm audit fix', {
                 cwd: process.cwd()
             });
             ExceptionHandler_1.logger.info('Auto-fix completed', { stdout, stderr });
-            // Re-scan to see results
-            const newReport = await this.scanDependencies();
+            const afterReport = await this.scanDependencies();
+            const fixedCount = beforeCount - afterReport.totalVulnerabilities;
             return {
                 success: true,
-                fixed: newReport.totalVulnerabilities, // This would be the remaining count
+                fixed: Math.max(0, fixedCount),
                 errors: []
             };
         }

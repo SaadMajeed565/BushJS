@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rules = exports.Validator = exports.ValidatorV2 = exports.ValidationException = exports.MaxRule = exports.MinRule = exports.EmailRule = exports.RequiredRule = void 0;
+exports.FormRequest = exports.rules = exports.Validator = exports.ValidatorV2 = exports.ValidationException = exports.MaxRule = exports.MinRule = exports.EmailRule = exports.RequiredRule = void 0;
+const HttpExceptions_1 = require("../Exceptions/HttpExceptions");
+Object.defineProperty(exports, "ValidationException", { enumerable: true, get: function () { return HttpExceptions_1.ValidationException; } });
 class RequiredRule {
     validate(value) {
         return value !== null && value !== undefined && value !== '';
@@ -56,14 +58,6 @@ class MaxRule {
     }
 }
 exports.MaxRule = MaxRule;
-class ValidationException extends Error {
-    constructor(errors) {
-        super('Validation failed');
-        this.errors = errors;
-        this.name = 'ValidationException';
-    }
-}
-exports.ValidationException = ValidationException;
 class ValidatorV2 {
     constructor(data, rules, messages = {}) {
         this.validationErrors = {};
@@ -267,7 +261,6 @@ class ValidatorV2 {
     }
     getErrorMessage(field, rule, parameter) {
         const fieldName = this.fieldNames.get(field) || field;
-        // Check custom messages
         if (this.messages[field]) {
             if (typeof this.messages[field] === 'string') {
                 return this.messages[field].replace(':attribute', fieldName);
@@ -277,7 +270,6 @@ class ValidatorV2 {
                 return ruleMessages[rule].replace(':attribute', fieldName);
             }
         }
-        // Default messages
         const messages = {
             required: (f) => `The ${f} field is required.`,
             email: (f) => `The ${f} must be a valid email address.`,
@@ -332,17 +324,34 @@ class Validator {
     fails() {
         return Object.keys(this.errors).length > 0;
     }
-    // Static helpers
     static make(data) {
         return new Validator(data);
     }
 }
 exports.Validator = Validator;
-// Common validation rules
 exports.rules = {
     required: () => new RequiredRule(),
     email: () => new EmailRule(),
     min: (min) => new MinRule(min),
     max: (max) => new MaxRule(max),
 };
+class FormRequest {
+    rules() {
+        return {};
+    }
+    messages() {
+        return {};
+    }
+    async validateRequest(request) {
+        const data = typeof request.body === 'object' && request.body !== null
+            ? request.body
+            : {};
+        const validator = ValidatorV2.make(data, this.rules(), this.messages());
+        const passes = validator.validate();
+        if (!passes) {
+            throw new HttpExceptions_1.ValidationException(validator.getErrors());
+        }
+    }
+}
+exports.FormRequest = FormRequest;
 //# sourceMappingURL=Validator.js.map

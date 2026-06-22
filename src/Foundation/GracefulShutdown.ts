@@ -29,8 +29,8 @@ export class GracefulShutdown {
 
       logger.info('Graceful shutdown completed successfully');
       process.exit(0);
-    } catch (error: any) {
-      logger.error('Error during graceful shutdown', {}, error.stack);
+    } catch (error: unknown) {
+      logger.error('Error during graceful shutdown', {}, error instanceof Error ? error.stack : String(error));
       process.exit(1);
     }
   }
@@ -42,8 +42,8 @@ export class GracefulShutdown {
         await mongoose.connection.close();
         logger.info('Database connections closed');
       }
-    } catch (error: any) {
-      logger.error('Error closing database connection', {}, error.stack);
+    } catch (error: unknown) {
+      logger.error('Error closing database connection', {}, error instanceof Error ? error.stack : String(error));
       throw error;
     }
   }
@@ -67,13 +67,21 @@ export function setupGracefulShutdown(): void {
 
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
-    logger.critical('Uncaught Exception', {}, error.stack);
+    try {
+      logger.critical('Uncaught Exception', {}, error.stack);
+    } catch {
+      process.stderr.write(`UNCAUGHT EXCEPTION: ${error.message}\n${error.stack}\n`);
+    }
     shutdown.handle('uncaughtException');
   });
 
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason) => {
-    logger.critical('Unhandled Rejection', { reason: String(reason) });
+    try {
+      logger.critical('Unhandled Rejection', { reason: String(reason) });
+    } catch {
+      process.stderr.write(`UNHANDLED REJECTION: ${String(reason)}\n`);
+    }
     shutdown.handle('unhandledRejection');
   });
 }

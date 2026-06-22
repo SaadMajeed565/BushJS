@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`) });
+dotenv.config();
 
 export interface AppConfig {
   name: string;
@@ -20,6 +20,10 @@ export interface DatabaseConfig {
   username?: string;
   password?: string;
   url?: string;
+  pool?: {
+    max: number;
+    min: number;
+  };
 }
 
 export interface AuthConfig {
@@ -156,7 +160,11 @@ class Config {
       database: this.env('DB_DATABASE', 'bushjs'),
       username: this.env('DB_USERNAME'),
       password: this.env('DB_PASSWORD'),
-      url: this.env('DATABASE_URL')
+      url: this.env('DATABASE_URL'),
+      pool: {
+        max: this.env('DB_POOL_MAX', 10),
+        min: this.env('DB_POOL_MIN', 2),
+      }
     };
   }
 
@@ -168,6 +176,12 @@ class Config {
     if (isProduction && (!jwtSecret || !sessionSecret)) {
       throw new Error(
         'AUTH_JWT_SECRET and AUTH_SESSION_SECRET are required in production.'
+      );
+    }
+
+    if (!jwtSecret || !sessionSecret) {
+      throw new Error(
+        'AUTH_JWT_SECRET and AUTH_SESSION_SECRET must be set in .env'
       );
     }
 
@@ -184,8 +198,8 @@ class Config {
           driver: 'session'
         }
       },
-      jwt_secret: jwtSecret || 'bush_dev_jwt_secret',
-      session_secret: sessionSecret || 'bush_dev_session_secret'
+      jwt_secret: jwtSecret,
+      session_secret: sessionSecret
     };
   }
 
@@ -306,8 +320,12 @@ class Config {
     if (value === 'null') return null;
     if (value === '') return '';
 
-    // Parse numbers
-    if (!isNaN(Number(value))) return Number(value);
+    // Only parse as number if the key is known to be numeric
+    const numericKeys = ['DB_PORT', 'DB_POOL_MAX', 'DB_POOL_MIN', 'REDIS_PORT', 'REDIS_DB', 'RATE_LIMIT_WINDOW_MS', 'RATE_LIMIT_MAX'];
+    if (numericKeys.includes(key)) {
+      const num = Number(value);
+      if (!isNaN(num)) return num;
+    }
 
     return value;
   }

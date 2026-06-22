@@ -1,25 +1,29 @@
 import { Model as MongooseModel, Document, FilterQuery } from 'mongoose';
 
-export class QueryBuilder {
+export class QueryBuilder<T = any> {
   private conditions: FilterQuery<any> = {};
+  private hasConditions = false;
   private limitValue?: number;
   private skipValue?: number;
   private sortValue?: Record<string, 1 | -1>;
 
   constructor(private model: MongooseModel<any>) {}
 
-  where(column: string, value: any): this {
+  where(column: string, value: unknown): this {
     this.conditions[column] = value;
+    this.hasConditions = true;
     return this;
   }
 
-  whereIn(column: string, values: any[]): this {
+  whereIn(column: string, values: unknown[]): this {
     this.conditions[column] = { $in: values };
+    this.hasConditions = true;
     return this;
   }
 
-  whereNotIn(column: string, values: any[]): this {
+  whereNotIn(column: string, values: unknown[]): this {
     this.conditions[column] = { $nin: values };
+    this.hasConditions = true;
     return this;
   }
 
@@ -38,7 +42,7 @@ export class QueryBuilder {
     return this;
   }
 
-  async get(): Promise<Document[]> {
+  async get(): Promise<T[]> {
     let query = this.model.find(this.conditions);
 
     if (this.sortValue) {
@@ -53,10 +57,10 @@ export class QueryBuilder {
       query = query.limit(this.limitValue);
     }
 
-    return await query.exec();
+    return await query.exec() as T[];
   }
 
-  async first(): Promise<Document | null> {
+  async first(): Promise<T | null> {
     const results = await this.get();
     return results.length > 0 ? results[0] : null;
   }
@@ -70,11 +74,17 @@ export class QueryBuilder {
     return count > 0;
   }
 
-  async delete(): Promise<any> {
+  async delete(): Promise<unknown> {
+    if (!this.hasConditions) {
+      throw new Error('Cannot delete without at least one where clause. Call where() first.');
+    }
     return await this.model.deleteMany(this.conditions);
   }
 
-  async update(data: Record<string, any>): Promise<any> {
+  async update(data: Record<string, unknown>): Promise<unknown> {
+    if (!this.hasConditions) {
+      throw new Error('Cannot update without at least one where clause. Call where() first.');
+    }
     return await this.model.updateMany(this.conditions, data);
   }
 }

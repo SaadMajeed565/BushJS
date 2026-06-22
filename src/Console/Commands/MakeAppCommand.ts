@@ -21,9 +21,8 @@ export class MakeAppCommand extends Command {
     await fs.mkdir(path.join(targetPath, 'Models'), { recursive: true });
     await fs.mkdir(path.join(targetPath, 'routes'), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
 
-    // Controller
     let controllerStub = await fs.readFile(path.join(stubsPath, 'controller.stub'), 'utf-8');
     controllerStub = controllerStub.replace(/{{class}}/g, 'WelcomeController');
     await fs.writeFile(
@@ -31,35 +30,13 @@ export class MakeAppCommand extends Command {
       controllerStub
     );
 
-    // Model
+    let modelStub = await fs.readFile(path.join(stubsPath, 'model.stub'), 'utf-8');
+    modelStub = modelStub.replace(/{{class}}/g, 'User').replace(/{{table}}/g, 'users');
     await fs.writeFile(
       path.join(targetPath, 'Models', 'User.ts'),
-      `import { Model } from '@framework/Database/Model';
-import mongoose, { Schema } from 'mongoose';
-
-export class User extends Model {
-  static collection = 'users';
-
-  static initialize(): void {
-    this.schema = new Schema({
-      name: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      password: { type: String, required: true },
-      created_at: { type: Date, default: Date.now },
-      updated_at: { type: Date, default: Date.now }
-    });
-
-    super.initialize();
-  }
-
-  static async findByEmail(email: string): Promise<any> {
-    return await this.where('email', email).first();
-  }
-}
-`
+      modelStub
     );
 
-    // Route
     const routeStub = await fs.readFile(path.join(stubsPath, 'route.stub'), 'utf-8');
     await fs.writeFile(
       path.join(targetPath, 'routes', 'api.ts'),

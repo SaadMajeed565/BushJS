@@ -7,11 +7,12 @@ exports.MakeModelCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
 class MakeModelCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:model';
-        this.description = 'Create a new model class.';
+        this.description = 'Create a new model class in the configured models directory.';
         this.app = app;
     }
     async handle(args) {
@@ -20,9 +21,9 @@ class MakeModelCommand extends Command_1.Command {
             console.log('Please provide a model name.');
             return;
         }
-        const modelPath = path_1.default.resolve(this.app.basePath, 'app', 'Models', `${name}.ts`);
+        const modelPath = path_1.default.resolve(this.app.basePath, Config_1.config.structure.models, `${name}.ts`);
         await promises_1.default.mkdir(path_1.default.dirname(modelPath), { recursive: true });
-        const stubsPath = path_1.default.resolve(__dirname, '../stubs');
+        const stubsPath = path_1.default.join(this.app.basePath, 'src', 'stubs');
         let modelStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'model.stub'), 'utf-8');
         const tableName = name.toLowerCase() + 's'; // Simple pluralization
         modelStub = modelStub.replace(/{{class}}/g, name).replace(/{{table}}/g, tableName);

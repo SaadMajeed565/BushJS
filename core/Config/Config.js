@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
-dotenv_1.default.config();
 dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`) });
+dotenv_1.default.config();
 class Config {
     constructor() {
         this.configs = new Map();
@@ -22,6 +22,7 @@ class Config {
         this.configs.set('encryption', this.encryptionConfig());
         this.configs.set('cache', this.cacheConfig());
         this.configs.set('filesystems', this.filesystemsConfig());
+        this.configs.set('structure', this.structureConfig());
     }
     get(key, defaultValue) {
         const keys = key.split('.');
@@ -71,10 +72,23 @@ class Config {
             database: this.env('DB_DATABASE', 'bushjs'),
             username: this.env('DB_USERNAME'),
             password: this.env('DB_PASSWORD'),
-            url: this.env('DATABASE_URL')
+            url: this.env('DATABASE_URL'),
+            pool: {
+                max: this.env('DB_POOL_MAX', 10),
+                min: this.env('DB_POOL_MIN', 2),
+            }
         };
     }
     authConfig() {
+        const jwtSecret = this.env('AUTH_JWT_SECRET');
+        const sessionSecret = this.env('AUTH_SESSION_SECRET');
+        const isProduction = this.env('NODE_ENV', 'development') === 'production';
+        if (isProduction && (!jwtSecret || !sessionSecret)) {
+            throw new Error('AUTH_JWT_SECRET and AUTH_SESSION_SECRET are required in production.');
+        }
+        if (!jwtSecret || !sessionSecret) {
+            throw new Error('AUTH_JWT_SECRET and AUTH_SESSION_SECRET must be set in .env');
+        }
         return {
             defaults: {
                 guard: this.env('AUTH_GUARD', 'api'),
@@ -88,8 +102,8 @@ class Config {
                     driver: 'session'
                 }
             },
-            jwt_secret: this.env('AUTH_JWT_SECRET', 'bush_secret'),
-            session_secret: this.env('AUTH_SESSION_SECRET', 'session_secret')
+            jwt_secret: jwtSecret,
+            session_secret: sessionSecret
         };
     }
     corsConfig() {
@@ -143,6 +157,19 @@ class Config {
             }
         };
     }
+    structureConfig() {
+        return {
+            controllers: this.env('STRUCTURE_CONTROLLERS_DIR', 'app/Http/Controllers'),
+            middleware: this.env('STRUCTURE_MIDDLEWARE_DIR', 'app/Http/Middleware'),
+            requests: this.env('STRUCTURE_REQUESTS_DIR', 'app/Http/Requests'),
+            models: this.env('STRUCTURE_MODELS_DIR', 'app/Models'),
+            policies: this.env('STRUCTURE_POLICIES_DIR', 'app/Policies'),
+            routes: this.env('STRUCTURE_ROUTES_DIR', 'routes'),
+            commands: this.env('STRUCTURE_COMMANDS_DIR', 'app/Console/Commands'),
+            schemas: this.env('STRUCTURE_SCHEMAS_DIR', 'database/schemas'),
+            seeders: this.env('STRUCTURE_SEEDERS_DIR', 'database/seeds')
+        };
+    }
     get app() {
         return this.get('app');
     }
@@ -164,6 +191,9 @@ class Config {
     get filesystems() {
         return this.get('filesystems');
     }
+    get structure() {
+        return this.get('structure');
+    }
     env(key, defaultValue = null) {
         const value = process.env[key];
         if (value === undefined) {
@@ -179,9 +209,13 @@ class Config {
             return null;
         if (value === '')
             return '';
-        // Parse numbers
-        if (!isNaN(Number(value)))
-            return Number(value);
+        // Only parse as number if the key is known to be numeric
+        const numericKeys = ['DB_PORT', 'DB_POOL_MAX', 'DB_POOL_MIN', 'REDIS_PORT', 'REDIS_DB', 'RATE_LIMIT_WINDOW_MS', 'RATE_LIMIT_MAX'];
+        if (numericKeys.includes(key)) {
+            const num = Number(value);
+            if (!isNaN(num))
+                return num;
+        }
         return value;
     }
 }

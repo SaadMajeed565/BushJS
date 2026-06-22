@@ -1,10 +1,12 @@
+import { ValidationException } from '../Exceptions/HttpExceptions';
+
 export interface ValidationRule {
-  validate(value: any, field: string): boolean | Promise<boolean>;
+  validate(value: unknown, field: string): boolean | Promise<boolean>;
   message(): string;
 }
 
 export class RequiredRule implements ValidationRule {
-  validate(value: any): boolean {
+  validate(value: unknown): boolean {
     return value !== null && value !== undefined && value !== '';
   }
 
@@ -14,7 +16,7 @@ export class RequiredRule implements ValidationRule {
 }
 
 export class EmailRule implements ValidationRule {
-  validate(value: any): boolean {
+  validate(value: unknown): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return typeof value === 'string' && emailRegex.test(value);
   }
@@ -27,7 +29,7 @@ export class EmailRule implements ValidationRule {
 export class MinRule implements ValidationRule {
   constructor(private min: number) {}
 
-  validate(value: any): boolean {
+  validate(value: unknown): boolean {
     if (typeof value === 'string' || Array.isArray(value)) {
       return value.length >= this.min;
     }
@@ -45,7 +47,7 @@ export class MinRule implements ValidationRule {
 export class MaxRule implements ValidationRule {
   constructor(private max: number) {}
 
-  validate(value: any): boolean {
+  validate(value: unknown): boolean {
     if (typeof value === 'string' || Array.isArray(value)) {
       return value.length <= this.max;
     }
@@ -60,12 +62,7 @@ export class MaxRule implements ValidationRule {
   }
 }
 
-export class ValidationException extends Error {
-  constructor(public errors: Record<string, string[]>) {
-    super('Validation failed');
-    this.name = 'ValidationException';
-  }
-}
+export { ValidationException };
 
 type ValidationRuleAliases = 
   | 'required' 
@@ -95,19 +92,19 @@ export type ValidationMessages = {
 };
 
 export class ValidatorV2 {
-  private data: Record<string, any>;
+  private data: Record<string, unknown>;
   private rules: Map<string, ValidationRuleString[]>;
   private messages: ValidationMessages;
   private validationErrors: Record<string, string[]> = {};
   private fieldNames: Map<string, string> = new Map();
 
-  constructor(data: Record<string, any>, rules: ValidationRules, messages: ValidationMessages = {}) {
+  constructor(data: Record<string, unknown>, rules: ValidationRules, messages: ValidationMessages = {}) {
     this.data = data;
     this.messages = messages;
     this.rules = this.parseRules(rules);
   }
 
-  static make(data: Record<string, any>, rules: ValidationRules, messages: ValidationMessages = {}): ValidatorV2 {
+  static make(data: Record<string, unknown>, rules: ValidationRules, messages: ValidationMessages = {}): ValidatorV2 {
     return new ValidatorV2(data, rules, messages);
   }
 
@@ -171,7 +168,7 @@ export class ValidatorV2 {
     return [parts[0], parts.slice(1).join(':')];
   }
 
-  private validateField(field: string, value: any, rule: string, parameter: string): boolean {
+  private validateField(field: string, value: unknown, rule: string, parameter: string): boolean {
     switch (rule) {
       case 'required':
         return this.required(value);
@@ -208,20 +205,20 @@ export class ValidatorV2 {
     }
   }
 
-  private required(value: any): boolean {
+  private required(value: unknown): boolean {
     if (value === null || value === undefined) return false;
     if (typeof value === 'string') return value.trim().length > 0;
     if (Array.isArray(value)) return value.length > 0;
     return true;
   }
 
-  private email(value: any): boolean {
+  private email(value: unknown): boolean {
     if (!this.required(value)) return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(String(value));
   }
 
-  private min(value: any, parameter: string): boolean {
+  private min(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const min = Number(parameter);
     if (typeof value === 'string' || Array.isArray(value)) {
@@ -230,7 +227,7 @@ export class ValidatorV2 {
     return Number(value) >= min;
   }
 
-  private max(value: any, parameter: string): boolean {
+  private max(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const max = Number(parameter);
     if (typeof value === 'string' || Array.isArray(value)) {
@@ -239,22 +236,22 @@ export class ValidatorV2 {
     return Number(value) <= max;
   }
 
-  private numeric(value: any): boolean {
+  private numeric(value: unknown): boolean {
     if (!this.required(value)) return true;
     return !isNaN(Number(value));
   }
 
-  private string(value: any): boolean {
+  private string(value: unknown): boolean {
     if (!this.required(value)) return true;
     return typeof value === 'string';
   }
 
-  private confirmed(field: string, value: any): boolean {
+  private confirmed(field: string, value: unknown): boolean {
     const confirmField = `${field}_confirmation`;
     return value === this.data[confirmField];
   }
 
-  private regex(value: any, parameter: string): boolean {
+  private regex(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     try {
       const regex = new RegExp(parameter);
@@ -264,7 +261,7 @@ export class ValidatorV2 {
     }
   }
 
-  private url(value: any): boolean {
+  private url(value: unknown): boolean {
     if (!this.required(value)) return true;
     try {
       new URL(String(value));
@@ -274,38 +271,38 @@ export class ValidatorV2 {
     }
   }
 
-  private date(value: any): boolean {
+  private date(value: unknown): boolean {
     if (!this.required(value)) return true;
     const date = new Date(String(value));
     return date instanceof Date && !isNaN(date.getTime());
   }
 
-  private after(value: any, parameter: string): boolean {
+  private after(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const date = new Date(String(value));
     const paramDate = new Date(parameter);
     return date > paramDate;
   }
 
-  private before(value: any, parameter: string): boolean {
+  private before(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const date = new Date(String(value));
     const paramDate = new Date(parameter);
     return date < paramDate;
   }
 
-  private array(value: any): boolean {
+  private array(value: unknown): boolean {
     if (!this.required(value)) return true;
     return Array.isArray(value);
   }
 
-  private in(value: any, parameter: string): boolean {
+  private in(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const items = parameter.split(',').map(v => v.trim());
     return items.includes(String(value));
   }
 
-  private notIn(value: any, parameter: string): boolean {
+  private notIn(value: unknown, parameter: string): boolean {
     if (!this.required(value)) return true;
     const items = parameter.split(',').map(v => v.trim());
     return !items.includes(String(value));
@@ -314,7 +311,6 @@ export class ValidatorV2 {
   private getErrorMessage(field: string, rule: string, parameter: string): string {
     const fieldName = this.fieldNames.get(field) || field;
 
-    // Check custom messages
     if (this.messages[field]) {
       if (typeof this.messages[field] === 'string') {
         return (this.messages[field] as string).replace(':attribute', fieldName);
@@ -325,7 +321,6 @@ export class ValidatorV2 {
       }
     }
 
-    // Default messages
     const messages: Record<string, (field: string, param: string) => string> = {
       required: (f) => `The ${f} field is required.`,
       email: (f) => `The ${f} must be a valid email address.`,
@@ -350,10 +345,10 @@ export class ValidatorV2 {
 
 export class Validator {
   private rules: Record<string, ValidationRule[]> = {};
-  private data: Record<string, any> = {};
+  private data: Record<string, unknown> = {};
   private errors: Record<string, string[]> = {};
 
-  constructor(data: Record<string, any>) {
+  constructor(data: Record<string, unknown>) {
     this.data = data;
   }
 
@@ -391,16 +386,36 @@ export class Validator {
     return Object.keys(this.errors).length > 0;
   }
 
-  // Static helpers
-  static make(data: Record<string, any>): Validator {
+  static make(data: Record<string, unknown>): Validator {
     return new Validator(data);
   }
 }
 
-// Common validation rules
 export const rules = {
   required: () => new RequiredRule(),
   email: () => new EmailRule(),
   min: (min: number) => new MinRule(min),
   max: (max: number) => new MaxRule(max),
 };
+
+export class FormRequest {
+  protected rules(): ValidationRules {
+    return {};
+  }
+
+  protected messages(): ValidationMessages {
+    return {};
+  }
+
+  async validateRequest(request: import('../Http/Request').Request): Promise<void> {
+    const data = typeof request.body === 'object' && request.body !== null
+      ? (request.body as Record<string, unknown>)
+      : {};
+    const validator = ValidatorV2.make(data, this.rules(), this.messages());
+    const passes = validator.validate();
+
+    if (!passes) {
+      throw new ValidationException(validator.getErrors());
+    }
+  }
+}

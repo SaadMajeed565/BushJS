@@ -7,11 +7,12 @@ exports.MakePolicyCommand = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const Command_1 = require("../Command");
+const Config_1 = require("../../Config/Config");
 class MakePolicyCommand extends Command_1.Command {
     constructor(app) {
         super();
         this.signature = 'make:policy';
-        this.description = 'Create a new policy class.';
+        this.description = 'Create a new policy class in the configured policies directory.';
         this.app = app;
     }
     async handle(args) {
@@ -20,9 +21,9 @@ class MakePolicyCommand extends Command_1.Command {
             console.log('Please provide a policy name.');
             return;
         }
-        const policyPath = path_1.default.resolve(this.app.basePath, 'app', 'Policies', `${name}Policy.ts`);
+        const policyPath = path_1.default.resolve(this.app.basePath, Config_1.config.structure.policies, `${name}Policy.ts`);
         await promises_1.default.mkdir(path_1.default.dirname(policyPath), { recursive: true });
-        const stubsPath = path_1.default.resolve(__dirname, '../stubs');
+        const stubsPath = path_1.default.join(this.app.basePath, 'src', 'stubs');
         let policyStub = await promises_1.default.readFile(path_1.default.join(stubsPath, 'policy.stub'), 'utf-8');
         policyStub = policyStub.replace(/{{class}}/g, name);
         await promises_1.default.writeFile(policyPath, policyStub);

@@ -24,7 +24,7 @@ export interface AuditEvent {
     userAgent?: string;
     resource?: string;
     action?: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     timestamp: Date;
     severity: 'low' | 'medium' | 'high' | 'critical';
 }
@@ -45,7 +45,7 @@ export declare class AuditLogger {
     logUserCreated(userId: string, username: string, ip: string, createdBy?: string): void;
     logUserDeleted(userId: string, username: string, ip: string, deletedBy: string): void;
     logAdminAction(userId: string, username: string, ip: string, action: string, resource: string): void;
-    logSuspiciousActivity(ip: string, activity: string, details?: Record<string, any>): void;
+    logSuspiciousActivity(ip: string, activity: string, details?: Record<string, unknown>): void;
     logRateLimitExceeded(ip: string, endpoint: string): void;
     logCsrfViolation(ip: string, userAgent?: string): void;
     logFileUpload(userId: string, filename: string, ip: string): void;
@@ -56,7 +56,7 @@ export declare class AuditLogger {
         startDate?: Date;
         endDate?: Date;
         severity?: string;
-    }): AuditEvent[];
+    }): Promise<AuditEvent[]>;
 }
 export declare const auditLogger: AuditLogger;
 //# sourceMappingURL=AuditLogger.d.ts.map

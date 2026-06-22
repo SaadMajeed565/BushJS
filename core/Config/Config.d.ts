@@ -13,6 +13,10 @@ export interface DatabaseConfig {
     username?: string;
     password?: string;
     url?: string;
+    pool?: {
+        max: number;
+        min: number;
+    };
 }
 export interface AuthConfig {
     defaults: {
@@ -55,6 +59,17 @@ export interface FilesystemsConfig {
         };
     };
 }
+export interface StructureConfig {
+    controllers: string;
+    middleware: string;
+    requests: string;
+    models: string;
+    policies: string;
+    routes: string;
+    commands: string;
+    schemas: string;
+    seeders: string;
+}
 declare class Config {
     private configs;
     constructor();
@@ -69,6 +84,7 @@ declare class Config {
     private encryptionConfig;
     private filesystemsConfig;
     private cacheConfig;
+    private structureConfig;
     get app(): AppConfig;
     get database(): DatabaseConfig;
     get auth(): AuthConfig;
@@ -76,6 +92,7 @@ declare class Config {
     get rate_limit(): RateLimitConfig;
     get encryption(): EncryptionConfig;
     get filesystems(): FilesystemsConfig;
+    get structure(): StructureConfig;
     private env;
 }
 export declare const config: Config;

@@ -1,4 +1,5 @@
-import { connection } from './Connection';
+import { getDefaultConnection } from './Connection';
+import { logger } from '../Foundation/ExceptionHandler';
 
 export interface Schema {
   up(): Promise<void> | void;
@@ -22,7 +23,7 @@ export abstract class BaseSchema implements Schema {
     const schema = new SchemaBuilder(collectionName);
     callback(schema);
 
-    const db = connection.getConnection().connection.db;
+    const db = getDefaultConnection().getConnection().connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not established');
     }
@@ -36,10 +37,11 @@ export abstract class BaseSchema implements Schema {
 
     try {
       await db.createCollection(collectionName, options);
-      console.log(`Created collection: ${collectionName}`);
-    } catch (error: any) {
-      if (error.codeName === 'NamespaceExists' || error.code === 48) {
-        console.log(`Collection already exists: ${collectionName}`);
+      logger.info(`Created collection: ${collectionName}`);
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown>;
+      if (err.codeName === 'NamespaceExists' || err.code === 48) {
+        logger.info(`Collection already exists: ${collectionName}`);
       } else {
         throw error;
       }
@@ -51,7 +53,7 @@ export abstract class BaseSchema implements Schema {
   }
 
   protected async createIndexes(collectionName: string, indexes: IndexDefinition[]): Promise<void> {
-    const db = connection.getConnection().connection.db;
+    const db = getDefaultConnection().getConnection().connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not established');
     }
@@ -59,7 +61,7 @@ export abstract class BaseSchema implements Schema {
 
     for (const index of indexes) {
       await collection.createIndex(index.fields, index.options);
-      console.log(`Created index for ${collectionName}:`, index.fields, index.options);
+      logger.info(`Created index for ${collectionName}`, { fields: index.fields, options: index.options });
     }
   }
 
@@ -68,7 +70,7 @@ export abstract class BaseSchema implements Schema {
   }
 
   protected async dropCollection(collectionName: string): Promise<void> {
-    const db = connection.getConnection().connection.db;
+    const db = getDefaultConnection().getConnection().connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not established');
     }
@@ -76,9 +78,9 @@ export abstract class BaseSchema implements Schema {
 
     if (exists) {
       await db.dropCollection(collectionName);
-      console.log(`Dropped collection: ${collectionName}`);
+      logger.info(`Dropped collection: ${collectionName}`);
     } else {
-      console.log(`Collection does not exist: ${collectionName}`);
+      logger.info(`Collection does not exist: ${collectionName}`);
     }
   }
 }
@@ -254,18 +256,18 @@ export class SchemaRunner {
   }
 
   async run(): Promise<void> {
-    console.log('Running schema files...');
+    logger.info('Running schema files...');
     for (const schema of this.schemas) {
       await schema.up();
     }
-    console.log('All schemas completed.');
+    logger.info('All schemas completed.');
   }
 
   async rollback(): Promise<void> {
-    console.log('Rolling back schema files...');
+    logger.info('Rolling back schema files...');
     for (let i = this.schemas.length - 1; i >= 0; i--) {
       await this.schemas[i].down();
     }
-    console.log('Rollback completed.');
+    logger.info('Rollback completed.');
   }
 }

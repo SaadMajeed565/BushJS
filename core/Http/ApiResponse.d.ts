@@ -5,7 +5,7 @@ export declare class ApiResponse {
     success(data: any, message?: string, status?: number): void;
     error(message?: string, status?: number, errors?: any): void;
     created(data: any, message?: string): void;
-    noContent(message?: string): void;
+    noContent(): void;
     paginate(data: any[], total: number, page: number, perPage: number, message?: string): void;
 }
 export declare class Resource {

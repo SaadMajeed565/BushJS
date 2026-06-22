@@ -13,6 +13,7 @@ const Connection_1 = require("../Database/Connection");
 const GracefulShutdown_1 = require("./GracefulShutdown");
 const Config_1 = require("../Config/Config");
 const Storage_1 = require("../Storage/Storage");
+const Gate_1 = require("../Auth/Gate");
 class Application {
     constructor(options = {}) {
         this.graphqlRoutes = [];
@@ -22,6 +23,7 @@ class Application {
         this.container = new Container_1.Container();
         this.router = new Router_1.Router();
         this.database = new Connection_1.Connection(options.databaseUrl);
+        (0, Connection_1.setDefaultConnection)(this.database);
         this.httpKernel = new Kernel_1.HttpKernel(this);
         this.consoleKernel = new Kernel_2.ConsoleKernel(this);
         this.registerBaseBindings();
@@ -43,7 +45,7 @@ class Application {
             }
             return m;
         });
-        this.container.singleton('gate', () => require('../Auth/Gate').gate);
+        this.container.singleton('gate', () => Gate_1.gate);
     }
     basePathTo(pathSegment) {
         return path_1.default.join(this.basePath, pathSegment);

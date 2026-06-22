@@ -11,7 +11,7 @@ export interface LogEntry {
     timestamp: string;
     level: LogLevel;
     message: string;
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
     stack?: string;
 }
 export declare class Logger {
@@ -20,11 +20,11 @@ export declare class Logger {
     constructor(explicitLogDir?: string | undefined);
     private effectiveLogDir;
     setLevel(level: LogLevel): void;
-    debug(message: string, context?: Record<string, any>): void;
-    info(message: string, context?: Record<string, any>): void;
-    warning(message: string, context?: Record<string, any>): void;
-    error(message: string, context?: Record<string, any>, stack?: string): void;
-    critical(message: string, context?: Record<string, any>, stack?: string): void;
+    debug(message: string, context?: Record<string, unknown>): void;
+    info(message: string, context?: Record<string, unknown>): void;
+    warning(message: string, context?: Record<string, unknown>): void;
+    error(message: string, context?: Record<string, unknown>, stack?: string): void;
+    critical(message: string, context?: Record<string, unknown>, stack?: string): void;
     private log;
     private shouldLog;
     private logToConsole;
@@ -33,8 +33,8 @@ export declare class Logger {
 export declare class ExceptionHandler {
     private logger;
     constructor(logger?: Logger);
-    handle(error: any, request: Request, response: Response): void;
-    renderError(error: any, request: Request, response: Response): void;
+    handle(error: unknown, request: Request, response: Response): void;
+    renderError(error: unknown, request: Request, response: Response): void;
     private wantJson;
 }
 export declare const logger: Logger;

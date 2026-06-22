@@ -24,7 +24,7 @@ export class MakeControllerCommand extends Command {
     const controllerPath = path.resolve(this.app.basePath, config.structure.controllers, `${name}.ts`);
     await fs.mkdir(path.dirname(controllerPath), { recursive: true });
 
-    const stubsPath = path.resolve(__dirname, '../stubs');
+    const stubsPath = path.join(this.app.basePath, 'src', 'stubs');
     let controllerStub = await fs.readFile(path.join(stubsPath, 'controller.stub'), 'utf-8');
     controllerStub = controllerStub.replace(/{{class}}/g, name);
 

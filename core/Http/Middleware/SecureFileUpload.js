@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.avatarUpload = exports.documentUpload = exports.imageUpload = exports.SecureFileUpload = void 0;
 exports.cleanupUploadedFiles = cleanupUploadedFiles;
+const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const ExceptionHandler_1 = require("../../Foundation/ExceptionHandler");
@@ -45,12 +46,12 @@ class SecureFileUpload {
                 cb(null, destination);
             },
             filename: (req, file, cb) => {
+                const ext = path_1.default.extname(file.originalname);
                 if (this.options.preserveFilename) {
                     const sanitized = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-                    cb(null, `${Date.now()}-${sanitized}`);
+                    cb(null, sanitized);
                 }
                 else {
-                    const ext = path_1.default.extname(file.originalname);
                     cb(null, `${Date.now()}-${Math.random().toString(36).substring(2)}${ext}`);
                 }
             }
@@ -65,7 +66,18 @@ class SecureFileUpload {
                 return cb(new Error(`File type ${file.mimetype} not allowed. Allowed types: ${this.options.allowedTypes.join(', ')}`));
             }
             const ext = path_1.default.extname(file.originalname).toLowerCase();
-            const dangerousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.vbs', '.js', '.jar'];
+            const dangerousExtensions = [
+                '.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.vbs', '.js', '.jar',
+                '.sh', '.bash', '.zsh', '.php', '.phtml', '.php3', '.php4', '.php5',
+                '.py', '.pyc', '.pl', '.pm', '.rb', '.rhtml', '.asp', '.aspx', '.cer',
+                '.cfm', '.cgi', '.dll', '.hta', '.htaccess', '.msi', '.msp', '.ocx',
+                '.ps1', '.psm1', '.psd1', '.swf', '.vbe', '.wsf', '.wsh', '.xsl',
+                '.xslt', '.jsp', '.jse', '.jfif', '.lnk', '.reg', '.scf', '.sct',
+                '.tmp', '.url', '.vb', '.wasm', '.app', '.elf', '.gadget', '.action',
+                '.inf', '.ins', '.isu', '.job', '.jse', '.mht', '.mhtml', '.msc',
+                '.mst', '.pcd', '.pif', '.prf', '.reg', '.scf', '.sct', '.shb',
+                '.shs', '.theme', '.u3p', '.vbe', '.wbk', '.wbk', '.wsc', '.wsh',
+            ];
             if (dangerousExtensions.includes(ext)) {
                 ExceptionHandler_1.logger.warning('File upload rejected: dangerous file extension', {
                     filename: file.originalname,
@@ -122,10 +134,9 @@ exports.avatarUpload = new SecureFileUpload({
     preserveFilename: false
 });
 function cleanupUploadedFiles(files) {
-    const fs = require('fs');
     files.forEach((file) => {
         try {
-            fs.unlinkSync(path_1.default.join(file.destination, file.filename));
+            fs_1.default.unlinkSync(path_1.default.join(file.destination, file.filename));
             ExceptionHandler_1.logger.info('Cleaned up uploaded file', { filename: file.filename });
         }
         catch (error) {

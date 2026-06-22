@@ -10,6 +10,7 @@ exports.encryptPhone = encryptPhone;
 exports.decryptPhone = decryptPhone;
 exports.hashPassword = hashPassword;
 exports.verifyPassword = verifyPassword;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const Config_1 = require("../Config/Config");
 const ExceptionHandler_1 = require("./ExceptionHandler");
@@ -20,13 +21,13 @@ class DataEncryption {
         // Get encryption key from config or generate one
         const keyString = Config_1.config.encryption?.key || process.env.ENCRYPTION_KEY;
         if (!keyString) {
-            ExceptionHandler_1.logger.warning('No encryption key provided, generating temporary key. Set ENCRYPTION_KEY in environment variables for production.');
-            this.key = crypto_1.default.randomBytes(32); // 256 bits
+            throw new Error('ENCRYPTION_KEY must be set in .env. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
         }
-        else {
-            // Derive key from string using PBKDF2
-            this.key = crypto_1.default.pbkdf2Sync(keyString, 'salt', 100000, 32, 'sha256');
+        const salt = process.env.ENCRYPTION_SALT;
+        if (!salt) {
+            throw new Error('ENCRYPTION_SALT must be set in .env. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(16).toString(\'hex\'))"');
         }
+        this.key = crypto_1.default.pbkdf2Sync(keyString, salt, 100000, 32, 'sha256');
     }
     static getInstance() {
         if (!DataEncryption.instance) {
@@ -73,14 +74,14 @@ class DataEncryption {
         }
     }
     /**
-     * Hash sensitive data (one-way encryption)
+     * SHA-256 hash (one-way, NOT suitable for passwords — use bcrypt for that).
      */
-    hash(text, saltRounds = 12) {
+    sha256(text) {
         try {
             return crypto_1.default.createHash('sha256').update(text).digest('hex');
         }
         catch (error) {
-            ExceptionHandler_1.logger.error('Hashing failed', { error: error.message });
+            ExceptionHandler_1.logger.error('SHA-256 hashing failed', { error: error.message });
             throw new Error('Failed to hash data');
         }
     }
@@ -140,12 +141,9 @@ function decryptPhone(encryptedPhone) {
     return exports.dataEncryption.decrypt(encryptedPhone);
 }
 function hashPassword(password) {
-    // Use bcryptjs (pure JS) to avoid native build toolchains.
-    const bcrypt = require('bcryptjs');
-    return bcrypt.hash(password, 12);
+    return bcryptjs_1.default.hash(password, 12);
 }
 function verifyPassword(password, hash) {
-    const bcrypt = require('bcryptjs');
-    return bcrypt.compare(password, hash);
+    return bcryptjs_1.default.compare(password, hash);
 }
 //# sourceMappingURL=DataEncryption.js.map

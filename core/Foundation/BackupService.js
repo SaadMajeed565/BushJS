@@ -1,50 +1,33 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.backupService = exports.BackupService = void 0;
 const child_process_1 = require("child_process");
-const util_1 = require("util");
 const fs_1 = __importDefault(require("fs"));
+const promises_1 = require("fs/promises");
 const path_1 = __importDefault(require("path"));
 const ExceptionHandler_1 = require("./ExceptionHandler");
 const Config_1 = require("../Config/Config");
 const Storage_1 = require("../Storage/Storage");
-const execAsync = (0, util_1.promisify)(child_process_1.exec);
+const package_json_1 = __importDefault(require("../../package.json"));
+function runCommand(binary, args) {
+    return new Promise((resolve, reject) => {
+        const child = (0, child_process_1.spawn)(binary, args);
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (data) => { stdout += data.toString(); });
+        child.stderr.on('data', (data) => { stderr += data.toString(); });
+        child.on('close', (code) => {
+            if (code === 0)
+                resolve({ stdout, stderr });
+            else
+                reject(new Error(`Command failed with exit code ${code}: ${stderr}`));
+        });
+        child.on('error', reject);
+    });
+}
 class BackupService {
     get backupDirectory() {
         return Storage_1.Storage.resolvedPath('backups');
@@ -158,9 +141,8 @@ class BackupService {
         const dbHost = Config_1.config.database?.host || 'localhost';
         const dbPort = Config_1.config.database?.port || 27017;
         // Use mongodump for MongoDB backup
-        const command = `mongodump --db ${dbName} --host ${dbHost} --port ${dbPort} --out ${backupPath}`;
         try {
-            await execAsync(command);
+            await runCommand('mongodump', ['--db', dbName, '--host', dbHost, '--port', String(dbPort), '--out', backupPath]);
             ExceptionHandler_1.logger.info('MongoDB backup completed', { database: dbName, path: backupPath });
         }
         catch (error) {
@@ -217,7 +199,7 @@ class BackupService {
     async createBackupManifest(backupPath, options) {
         const manifest = {
             timestamp: new Date().toISOString(),
-            version: require('../../../package.json').version,
+            version: package_json_1.default.version,
             type: 'full',
             options,
             system: {
@@ -236,14 +218,12 @@ class BackupService {
     async compressBackup(backupPath) {
         const compressedPath = `${backupPath}.tar.gz`;
         try {
-            // Use tar command for compression
-            const command = `tar -czf ${compressedPath} -C ${path_1.default.dirname(backupPath)} ${path_1.default.basename(backupPath)}`;
-            await execAsync(command);
+            await runCommand('tar', ['-czf', compressedPath, '-C', path_1.default.dirname(backupPath), path_1.default.basename(backupPath)]);
             ExceptionHandler_1.logger.info('Backup compressed successfully', { path: compressedPath });
             return compressedPath;
         }
         catch (error) {
-            ExceptionHandler_1.logger.warning('tar command not available, backup not compressed');
+            ExceptionHandler_1.logger.warning('tar command not available or failed, backup saved uncompressed. Install tar for compression support.', { error: error.message });
             return backupPath;
         }
     }
@@ -311,9 +291,8 @@ class BackupService {
         const dbName = Config_1.config.database?.database || 'bushjs';
         const dbHost = Config_1.config.database?.host || 'localhost';
         const dbPort = Config_1.config.database?.port || 27017;
-        const command = `mongorestore --db ${dbName} --host ${dbHost} --port ${dbPort} ${backupPath}`;
         try {
-            await execAsync(command);
+            await runCommand('mongorestore', ['--db', dbName, '--host', dbHost, '--port', String(dbPort), backupPath]);
             ExceptionHandler_1.logger.info('MongoDB restoration completed', { database: dbName, path: backupPath });
         }
         catch (error) {
@@ -350,9 +329,8 @@ class BackupService {
      */
     async decompressBackup(compressedPath) {
         const extractPath = compressedPath.replace('.tar.gz', '');
-        const command = `tar -xzf ${compressedPath} -C ${path_1.default.dirname(extractPath)}`;
         try {
-            await execAsync(command);
+            await runCommand('tar', ['-xzf', compressedPath, '-C', path_1.default.dirname(extractPath)]);
             ExceptionHandler_1.logger.info('Backup decompressed successfully', { path: compressedPath });
         }
         catch (error) {
@@ -364,8 +342,7 @@ class BackupService {
      * Utility methods
      */
     async copyDirectory(source, target) {
-        const { copy } = await Promise.resolve().then(() => __importStar(require('fs-extra')));
-        await copy(source, target);
+        await (0, promises_1.cp)(source, target, { recursive: true });
     }
     getDirectorySize(dirPath) {
         let totalSize = 0;

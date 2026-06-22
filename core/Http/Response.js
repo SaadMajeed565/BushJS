@@ -4,11 +4,11 @@ exports.Response = void 0;
 class Response {
     constructor(response) {
         this.sent = false;
-        if (response && 'setHeader' in response && 'end' in response) {
-            this.serverResponse = response;
+        if ('set' in response) {
+            this.expressResponse = response;
         }
         else {
-            this.expressResponse = response;
+            this.serverResponse = response;
         }
     }
     status(code) {
@@ -38,6 +38,10 @@ class Response {
             this.expressResponse.send(body);
         }
         else if (this.serverResponse) {
+            if (body === undefined) {
+                this.serverResponse.end();
+                return;
+            }
             if (typeof body === 'object') {
                 this.header('Content-Type', 'application/json');
                 this.serverResponse.end(JSON.stringify(body, null, 2));
@@ -80,7 +84,11 @@ class Response {
         }
         else if (this.serverResponse) {
             const cookieStr = this.buildCookieString(name, value, options);
-            this.serverResponse.setHeader('Set-Cookie', cookieStr);
+            const existing = this.serverResponse.getHeader('Set-Cookie');
+            const cookies = existing
+                ? (Array.isArray(existing) ? existing : [String(existing)]).concat(cookieStr)
+                : [cookieStr];
+            this.serverResponse.setHeader('Set-Cookie', cookies);
         }
         return this;
     }
