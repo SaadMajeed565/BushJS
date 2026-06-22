@@ -6,7 +6,7 @@ import { auth } from '../../Auth/Auth';
 export class AuthMiddleware extends Middleware {
   private guard: string;
 
-  constructor(guard = 'web') {
+  constructor(guard = 'api') {
     super();
     this.guard = guard;
   }

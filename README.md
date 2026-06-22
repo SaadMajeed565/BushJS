@@ -4,285 +4,327 @@
 [![npm version](https://img.shields.io/npm/v/bushjs)](https://www.npmjs.com/package/bushjs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Laravel-inspired Node.js framework built with Express.js and MongoDB.
+**bushjs** — the core runtime library of the Bush.js framework. A Node.js framework built with Express.js and MongoDB.
 
 ```bash
-npx bushjs-cli new my-app
-cd my-app
-npm install
-npm run dev
+npm install bushjs
 ```
-
-## Official Links
-
-- Full documentation: [Bush.js Docs README](https://github.com/SaadMajeed565/BushJS/blob/main/docs/README.md)
-- GitHub repository: [SaadMajeed565/BushJS](https://github.com/SaadMajeed565/BushJS/)
 
 ## Features
 
-- 🚀 Express.js HTTP server with middleware support
-- 🍃 MongoDB integration with Mongoose ODM
-- 🛣️ Laravel-style routing with controllers
-- 🔐 Authentication system with guards and middleware
-- ✅ Request validation with custom rules
-- 📊 Database schemas and seeders
-- 🎯 Service container for dependency injection
-- 🖥️ CLI commands for scaffolding
-- 📁 Laravel-like folder structure
-- 📚 Comprehensive documentation with examples in `docs/`
+- **HTTP Server** — Express.js-based server with middleware pipeline
+- **Routing** — Route registration (GET, POST, PUT, PATCH, DELETE, groups, named routes)
+- **Controllers** — Base controller with validation and authorization helpers
+- **Middleware** — Auth, guest, CSRF, rate-limiting middleware
+- **Authentication** — Session and JWT token guards with user providers
+- **Authorization** — Gates and policies for access control
+- **Validation** — Rule-based validation (required, email, min/max, confirmed, unique, etc.)
+- **Database** — Mongoose ODM integration with Model, QueryBuilder, Schema runner, and Seeder
+- **Service Container** — Dependency injection container with singleton bindings
+- **Config** — Centralized configuration management
+- **Storage** — Filesystem abstraction (local disk adapter)
+- **API Versioning** — URI prefix-based versioning with deprecation support
+- **GraphQL** — GraphQL route registration via `graphql-http`
+- **WebSockets** — WebSocket route registration via `express-ws` / `ws`
+- **Console** — CLI command kernel with scaffolding generators (controllers, models, middleware, etc.)
+- **Exception Handling** — Structured error handling with logging
+- **Graceful Shutdown** — Clean server teardown on SIGTERM/SIGINT
+
+## Quick Start
+
+```typescript
+import { Application } from 'bushjs';
+
+const app = new Application({ basePath: process.cwd() });
+
+app.get('/hello', async (_req, res) => {
+  res.send('Hello from Bush.js');
+});
+
+await app.listen(3000);
+console.log('Server running on http://localhost:3000');
+```
+
+## Project Structure
+
+This is the **framework core package**. The actual source lives in `src/` and compiles to `core/`.
+
+```
+bush-js/
+├── src/                      # TypeScript source
+│   ├── Auth/                 # Authentication (SessionGuard, TokenGuard, Gate)
+│   ├── Config/               # Configuration manager
+│   ├── Console/              # CLI kernel + generator commands
+│   │   └── Commands/         # make:controller, make:model, migrate, seed, etc.
+│   ├── Container/            # Service container (DI)
+│   ├── Contracts/            # Interface contracts
+│   ├── Database/             # MongoDB/Mongoose integration
+│   │   ├── Connection.ts     # Database connection manager
+│   │   ├── Model.ts          # Base model class
+│   │   ├── QueryBuilder.ts   # Fluent query builder
+│   │   ├── Schema.ts         # Schema runner + builder
+│   │   ├── Seeder.ts         # Database seeder
+│   │   └── ObjectIdUtils.ts  # ObjectId validation/coercion
+│   ├── Exceptions/           # HTTP exception classes
+│   ├── Foundation/           # Application bootstrap, exception handler, graceful shutdown
+│   ├── Http/                 # HTTP layer
+│   │   ├── Controller.ts     # Base controller
+│   │   ├── Kernel.ts         # HTTP middleware kernel
+│   │   ├── Request.ts        # Request wrapper
+│   │   ├── Response.ts       # Response wrapper
+│   │   ├── Router.ts         # Route registration + matching
+│   │   ├── ApiResponse.ts    # Standardized JSON responses
+│   │   ├── APIVersioning.ts  # API versioning support
+│   │   └── Middleware/       # AuthMiddleware, CsrfMiddleware, RateLimitMiddleware
+│   ├── Storage/              # Filesystem abstraction (local adapter)
+│   ├── Validation/           # Rule-based validator
+│   ├── WebSockets/           # WebSocket support
+│   ├── bush.ts               # Convenience re-exports
+│   └── index.ts              # Public API exports
+├── core/                     # Compiled JavaScript output (published to npm)
+├── tests/                    # Test suite
+│   ├── unit/                 # Unit tests
+│   └── integration/          # Integration tests
+├── docs/                     # Documentation
+├── storage/                  # File storage (backups, etc.)
+├── package.json
+└── tsconfig.json
+```
+
+## Core API
+
+### Application
+
+The central bootstrap class. Creates the HTTP server, router, console kernel, database connection, and service container.
+
+```typescript
+import { Application } from 'bushjs';
+
+const app = new Application({ basePath: __dirname, databaseUrl: 'mongodb://localhost:27017/myapp' });
+```
+
+| Method | Description |
+|--------|-------------|
+| `app.get(path, handler, middleware?)` | Register a GET route |
+| `app.post(path, handler, middleware?)` | Register a POST route |
+| `app.route(method, path, handler, middleware?)` | Register a route by HTTP method string |
+| `app.router.put/patch/delete/any(...)` | Register other HTTP methods via the Router |
+| `app.group({ prefix, middleware }, callback)` | Group routes with shared prefix/middleware |
+| `app.graphql(path, schema, rootValue?)` | Register a GraphQL endpoint |
+| `app.socket(path, handler)` | Register a WebSocket endpoint |
+| `app.basePathTo(subpath)` | Resolve a path relative to the app base |
+| `await app.listen(port)` | Start the HTTP server |
+| `app.expressApp` | Access the underlying Express application |
+
+### Router
+
+Standalone route registration and matching. Accessed via `app.router` or used independently.
+
+```typescript
+import { Router } from 'bushjs';
+
+const router = new Router();
+router.get('/users', handler);
+router.post('/users', handler, [authMiddleware]);
+router.group({ prefix: '/admin', middleware: [adminMiddleware] }, () => {
+  router.get('/dashboard', dashboardHandler);
+});
+```
+
+| Method | Description |
+|--------|-------------|
+| `router.get/post/put/patch/delete(path, handler, middleware?)` | Register a route by HTTP method |
+| `router.any(path, handler, middleware?)` | Match any HTTP method |
+| `router.register(method, path, handler, middleware?)` | Register a route by method string |
+| `router.group({ prefix, middleware }, callback)` | Group routes with shared config |
+
+### Controller
+
+Abstract base controller with validation and authorization helpers.
+
+```typescript
+import { Controller, Request, Response } from 'bushjs';
+
+export class UserController extends Controller {
+  async index(request: Request, response: Response) {
+    const data = await this.validate(request, {
+      email: ['required', 'email'],
+    });
+    await this.authorize(request, 'view-users');
+    response.json({ users: [] });
+  }
+}
+```
+
+### Model
+
+Mongoose-based model with a fluent query builder.
+
+```typescript
+import { Model } from 'bushjs';
+
+export class User extends Model {
+  static collection = 'users';
+  static fields = {
+    name: { type: 'string' as const, required: true },
+    email: { type: 'string' as const, required: true, unique: true },
+  };
+}
+
+const users = await User.all();
+const user = await User.find('id');
+const admins = await User.where('role', 'admin').get();
+```
+
+### Authentication
+
+JWT token-based guard (default) and session-based guard for web apps.
+
+```typescript
+import { auth, AuthMiddleware } from 'bushjs';
+
+// API login (default 'api' guard — TokenGuard)
+const user = await auth.guard().validate({ email, password });
+auth.guard().login(request, user);
+
+// Check authentication using default guard
+const isAuthenticated = await auth.guard().check(request);
+
+// Session-based auth for web apps
+const sessionUser = await auth.guard('session').validate({ email, password });
+```
+
+### Validation
+
+Rule-based validation.
+
+```typescript
+import { ValidatorV2 } from 'bushjs';
+
+const validator = ValidatorV2.make(request.body, {
+  name: ['required', 'min:2', 'max:50'],
+  email: ['required', 'email'],
+  password: ['required', 'min:8', 'confirmed'],
+});
+
+if (validator.validate()) {
+  // data is valid
+} else {
+  const errors = validator.getErrors();
+}
+```
+
+### Storage
+
+Filesystem abstraction with disk configuration.
+
+```typescript
+import { Storage } from 'bushjs';
+
+await Storage.disk('local').put('file.txt', 'content');
+const content = await Storage.disk('local').get('file.txt');
+const exists = await Storage.disk('local').exists('file.txt');
+```
+
+### API Versioning
+
+Prefix-based versioning with deprecation support.
+
+```typescript
+import { apiVersioning, v1Route } from 'bushjs';
+
+// Apply version extraction middleware
+app.expressApp.use(apiVersioning.middleware());
+
+// Route helpers produce version-prefixed paths
+app.get(v1Route('/users'), userHandlerV1);
+
+// Deprecation and version-requirement middleware
+import { requireVersion, deprecateVersion } from 'bushjs';
+
+app.get('/api/v2/users', requireVersion('2'), userHandlerV2);
+```
+
+### Console / CLI
+
+The console kernel registers scaffolding generators.
+
+```
+make:controller    Generate a controller class
+make:model         Generate a model class
+make:middleware    Generate a middleware class
+make:request       Generate a form request class
+make:policy        Generate a policy class
+make:schema        Generate a database schema
+make:seeder        Generate a database seeder
+make:command       Generate a custom CLI command
+schema             Run pending schema files
+seed               Run database seeders
+```
+
+### Schema & Migrations
+
+Define MongoDB collection schemas with validation rules.
+
+```typescript
+import { BaseSchema, SchemaBuilder } from 'bushjs';
+
+export class CreateUsersSchema extends BaseSchema {
+  async up() {
+    await this.createCollection('users', (schema: SchemaBuilder) => {
+      schema.string('name').required();
+      schema.string('email').required().unique();
+      schema.string('password').required();
+      schema.timestamps();
+    });
+  }
+
+  async down() {
+    // drop collection
+  }
+}
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Run tests
+npm test
+npm run test:unit
+npm run test:integration
+npm run test:coverage
+```
+
+## Documentation
+
+Full documentation is available in [`docs/README.md`](docs/README.md):
+
+- [Introduction](docs/introduction.md)
+- [Installation](docs/installation.md)
+- [Getting Started](docs/getting-started.md)
+- [Configuration](docs/configuration.md)
+- [Routing](docs/routing.md)
+- [Controllers](docs/controllers.md)
+- [Middleware](docs/middleware.md)
+- [Validation](docs/validation.md)
+- [Authentication](docs/authentication.md)
+- [Authorization](docs/authorization.md)
+- [Database](docs/database.md)
+- [GraphQL](docs/graphql.md)
+- [WebSockets](docs/realtime-websockets.md)
+- [CLI Reference](docs/cli.md)
 
 ## Requirements
 
 - Node.js 22+
 - MongoDB 4.0+
-- npm or yarn
-
-## Create a new project
-
-Project scaffolding is handled by the CLI package, not by the framework core.
-
-Install the CLI package and use:
-
-```bash
-npx bushjs-cli new project-name
-```
-
-Then install dependencies and run:
-
-```bash
-cd project-name
-npm install
-npm run dev
-```
-
-## CLI generators
-
-Once your project is created, you can scaffold common pieces with:
-
-```bash
-npx bush make:controller MyController
-npx bush make:model User
-npx bush make:middleware AuthMiddleware
-npx bush make:request RegisterRequest
-npx bush make:policy UserPolicy
-npx bush make:route users
-npx bush make:command SampleCommand
-```
-
-## Installation
-
-1. **Install MongoDB:**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install mongodb
-
-   # macOS with Homebrew
-   brew install mongodb-community
-
-   # Or use Docker
-   docker run -d -p 27017:27017 --name mongodb mongo:latest
-   ```
-
-2. **Clone and install:**
-   ```bash
-   git clone <repository>
-   cd bush-js
-   npm install
-   ```
-
-3. **Environment setup:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your MongoDB connection string
-   ```
-
-4. **Start MongoDB:**
-   ```bash
-   # If installed locally
-   sudo systemctl start mongodb
-
-   # Or with Docker
-   docker start mongodb
-   ```
-
-## Documentation
-
-Read the full framework docs in [`docs/README.md`](docs/README.md), including guides for:
-
-- routing and controllers
-- middleware and validation
-- authentication and authorization
-- database models and schema files
-- GraphQL and realtime WebSockets
-- CLI-generated app basics and advanced custom architecture with `bushjs`
-
-## Quick Start
-
-1. **Build the project:**
-   ```bash
-   npm run build
-   ```
-
-2. **Start the development server:**
-   ```bash
-   npm run dev  # Uses nodemon for auto-restart on file changes
-   # or
-   npm start    # Production build
-   ```
-
-3. **Run schemas:**
-   ```bash
-   npm run cli make:schema create_users
-   npm run cli schema
-   ```
-
-4. **Run seeders:**
-   ```bash
-   npm run cli make:seeder initial_users
-   npm run cli seed
-   ```
-
-5. **Test the API:**
-   ```bash
-   curl http://localhost:3000/
-   # Returns: "Welcome to bush.js — your Node.js framework"
-   ```
-
-## Project Structure
-
-```
-bush-js/
-├── app/                    # Application code
-│   ├── Http/
-│   │   ├── Controllers/    # Controller classes
-│   │   └── Middleware/     # Custom middleware
-│   └── Models/            # Mongoose models
-├── routes/                # Route definitions
-│   ├── api.ts            # REST routes
-│   ├── graphql.ts        # GraphQL registration
-│   └── websocket.ts      # WebSocket registration
-├── config/               # Configuration files
-├── database/             # Database related files
-│   └── schemas/          # Schema files
-├── src/                  # Framework core
-
-├── storage/              # File storage
-├── tests/                # Test files
-├── .env                  # Environment variables
-└── package.json
-```
-
-## API Examples
-
-### Authentication
-
-```bash
-# Register a user
-curl -X POST http://localhost:3000/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "email": "admin@bushjs.com"}'
-
-# Login
-curl -X POST http://localhost:3000/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@bushjs.com", "password": "password"}'
-
-# Get profile (requires authentication)
-curl http://localhost:3000/profile \
-  -H "Authorization: Bearer <token>"
-```
-
-### Models and Relationships
-
-```typescript
-// app/Models/User.ts
-import { Model } from '@framework/Database/Model';
-
-export class User extends Model {
-  static collection = 'users';
-
-  static initialize(): void {
-    this.schema = new Schema<IUser>({
-      name: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      password: { type: String },
-    });
-  }
-}
-
-// Usage
-const users = await User.all();
-const user = await User.find('user_id');
-```
-
-### Routing
-
-```typescript
-// routes/api.ts
-import { Application } from '@framework';
-
-export function registerRoutes(app: Application) {
-  app.get('/', [WelcomeController, 'index']);
-  app.post('/users', [UserController, 'store']).middleware([AuthMiddleware]);
-}
-
-// routes/graphql.ts
-import { Application } from '@framework';
-
-export function registerRoutes(app: Application) {
-  app.graphql('/graphql', schema, rootValue);
-}
-
-// routes/websocket.ts
-import { Application } from '@framework';
-
-export function registerRoutes(app: Application) {
-  app.socket('/chat', ChatSocketHandler);
-}
-```
-
-### Validation
-
-```typescript
-// In a controller
-const data = await this.validate(request, {
-  name: [rules.required(), rules.min(2), rules.max(50)],
-  email: [rules.required(), rules.email()],
-});
-```
-
-## CLI Commands
-
-```bash
-# Create a new controller
-npm run cli make:controller UserController
-
-# Create a new model
-npm run cli make:model User
-
-# Create a new schema
-npm run cli make:schema create_users
-
-# Run schema files
-npm run cli schema
-```
-
-## Key Differences from Laravel
-
-- **Language:** TypeScript instead of PHP
-- **Database:** MongoDB with Mongoose instead of SQL with Eloquent
-- **HTTP Server:** Express.js instead of built-in PHP server
-- **Package Manager:** npm instead of Composer
-- **Syntax:** JavaScript/TypeScript syntax while maintaining Laravel-like patterns
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
 
 ## License
 
-MIT License
+MIT License © Saad Majeed

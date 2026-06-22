@@ -289,7 +289,7 @@ export class Auth {
     return this;
   }
 
-  guard(name = 'web'): Guard {
+  guard(name = 'api'): Guard {
     const guard = this.guards.get(name);
     if (!guard) {
       throw new Error(`Guard "${name}" is not registered.`);
@@ -297,11 +297,11 @@ export class Auth {
     return guard;
   }
 
-  check(request: Request, name = 'web'): Promise<boolean> {
+  check(request: Request, name = 'api'): Promise<boolean> {
     return Promise.resolve(this.guard(name).check(request));
   }
 
-  user(request: Request, name = 'web'): Promise<AuthUser | null> {
+  user(request: Request, name = 'api'): Promise<AuthUser | null> {
     return this.guard(name).user(request);
   }
 
@@ -313,11 +313,11 @@ export class Auth {
     return null;
   }
 
-  id(request: Request, name = 'web'): string | null {
+  id(request: Request, name = 'api'): string | null {
     return this.guard(name).id(request);
   }
 
-  async attempt(request: Request, credentials: Record<string, any>, guardName = 'web'): Promise<boolean> {
+  async attempt(request: Request, credentials: Record<string, any>, guardName = 'api'): Promise<boolean> {
     const user = await this.guard(guardName).validate(credentials);
     if (user) {
       this.guard(guardName).login(request, user);
@@ -326,11 +326,11 @@ export class Auth {
     return false;
   }
 
-  login(request: Request, user: AuthUser, guardName = 'web'): void {
+  login(request: Request, user: AuthUser, guardName = 'api'): void {
     this.guard(guardName).login(request, user);
   }
 
-  logout(request: Request, guardName = 'web'): void {
+  logout(request: Request, guardName = 'api'): void {
     this.guard(guardName).logout(request);
   }
 
@@ -347,5 +347,5 @@ export class Auth {
 }
 
 export const auth = new Auth();
-auth.register('web', new SessionGuard());
 auth.register('api', new TokenGuard());
+auth.register('session', new SessionGuard());
