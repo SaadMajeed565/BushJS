@@ -238,17 +238,17 @@ class Auth {
         this.guards.set(name, guard);
         return this;
     }
-    guard(name = 'web') {
+    guard(name = 'api') {
         const guard = this.guards.get(name);
         if (!guard) {
             throw new Error(`Guard "${name}" is not registered.`);
         }
         return guard;
     }
-    check(request, name = 'web') {
+    check(request, name = 'api') {
         return Promise.resolve(this.guard(name).check(request));
     }
-    user(request, name = 'web') {
+    user(request, name = 'api') {
         return this.guard(name).user(request);
     }
     async userFromToken(token, guardName = 'api') {
@@ -258,10 +258,10 @@ class Auth {
         }
         return null;
     }
-    id(request, name = 'web') {
+    id(request, name = 'api') {
         return this.guard(name).id(request);
     }
-    async attempt(request, credentials, guardName = 'web') {
+    async attempt(request, credentials, guardName = 'api') {
         const user = await this.guard(guardName).validate(credentials);
         if (user) {
             this.guard(guardName).login(request, user);
@@ -269,10 +269,10 @@ class Auth {
         }
         return false;
     }
-    login(request, user, guardName = 'web') {
+    login(request, user, guardName = 'api') {
         this.guard(guardName).login(request, user);
     }
-    logout(request, guardName = 'web') {
+    logout(request, guardName = 'api') {
         this.guard(guardName).logout(request);
     }
     static async hashPassword(password) {
@@ -289,6 +289,6 @@ class Auth {
 }
 exports.Auth = Auth;
 exports.auth = new Auth();
-exports.auth.register('web', new SessionGuard());
 exports.auth.register('api', new TokenGuard());
+exports.auth.register('session', new SessionGuard());
 //# sourceMappingURL=Auth.js.map

@@ -4,7 +4,7 @@ exports.GuestMiddleware = exports.AuthMiddleware = void 0;
 const Middleware_1 = require("../Middleware/Middleware");
 const Auth_1 = require("../../Auth/Auth");
 class AuthMiddleware extends Middleware_1.Middleware {
-    constructor(guard = 'web') {
+    constructor(guard = 'api') {
         super();
         this.guard = guard;
     }
