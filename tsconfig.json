@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "rootDir": "src",
     "baseUrl": "src",
-    "types": ["node"],
+    "types": ["node", "multer"],
     "outDir": "./core",
     "resolveJsonModule": true,
     "moduleResolution": "Node",
